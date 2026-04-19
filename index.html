@@ -234,7 +234,14 @@
     .carriage-section { margin: 1rem 0; padding-bottom: 0.8rem; border-bottom: 1px solid rgba(255,255,255,0.05); }
     .carriage-title { font-size: 0.95rem; margin-bottom: 0.6rem; color: var(--rgb-2); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
     .issue-fill-block { margin-bottom: 0.8rem; }
-    .issue-fill-label { font-size: 0.85rem; margin-bottom: 0.3rem; color: rgba(255,255,255,0.8); }
+    .issue-fill-label {
+      font-size: 0.95rem;
+      font-weight: 700;
+      margin-bottom: 0.4rem;
+      color: #fff;
+      letter-spacing: 0.2px;
+      text-shadow: 0 0 6px rgba(0, 212, 255, 0.25);
+    }
     .radio-capsule-group { display: flex; flex-wrap: wrap; gap: 0.4rem; }
     .radio-capsule { position: relative; }
     .radio-capsule input { position: absolute; opacity: 0; cursor: pointer; }
@@ -533,12 +540,46 @@
     let forms = {}, responses = {}, currentFormId = null, carriageCount = 0, isAdmin = false, editingFormId = null;
     
     async function jsonbinGet() {
-      try { const res = await fetch(`${JSONBIN_CONFIG.baseUrl}/${JSONBIN_CONFIG.binId}`, { headers: { 'X-Access-Key': JSONBIN_CONFIG.apiKey } }); return (await res.json()).record; } 
-      catch { return { forms: JSON.parse(localStorage.getItem('tr_forms')||'{}'), responses: JSON.parse(localStorage.getItem('tr_responses')||'{}') }; }
+      try {
+        const res = await fetch(`${JSONBIN_CONFIG.baseUrl}/${JSONBIN_CONFIG.binId}/latest`, {
+          headers: { 'X-Master-Key': JSONBIN_CONFIG.apiKey, 'X-Bin-Meta': 'false' },
+          cache: 'no-store'
+        });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const body = await res.json();
+        // Depending on X-Bin-Meta, body is either the raw record or { record, metadata }.
+        const record = (body && typeof body === 'object' && 'record' in body) ? body.record : body;
+        return {
+          forms: (record && record.forms) || {},
+          responses: (record && record.responses) || {}
+        };
+      } catch (err) {
+        console.warn('[jsonbinGet] falling back to localStorage:', err);
+        return {
+          forms: JSON.parse(localStorage.getItem('tr_forms')||'{}'),
+          responses: JSON.parse(localStorage.getItem('tr_responses')||'{}')
+        };
+      }
     }
     async function jsonbinSave(data) {
-      try { await fetch(`${JSONBIN_CONFIG.baseUrl}/${JSONBIN_CONFIG.binId}`, { method:'PUT', headers:{'X-Access-Key':JSONBIN_CONFIG.apiKey,'Content-Type':'application/json','X-Master-Key':JSONBIN_CONFIG.apiKey}, body:JSON.stringify(data) }); }
-      catch { localStorage.setItem('tr_forms',JSON.stringify(data.forms)); localStorage.setItem('tr_responses',JSON.stringify(data.responses)); }
+      // Always mirror to localStorage so the admin device keeps working offline.
+      try {
+        localStorage.setItem('tr_forms', JSON.stringify(data.forms));
+        localStorage.setItem('tr_responses', JSON.stringify(data.responses));
+      } catch {}
+      try {
+        const res = await fetch(`${JSONBIN_CONFIG.baseUrl}/${JSONBIN_CONFIG.binId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Master-Key': JSONBIN_CONFIG.apiKey
+          },
+          body: JSON.stringify(data)
+        });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+      } catch (err) {
+        console.warn('[jsonbinSave] remote save failed:', err);
+      }
     }
 
     function checkAdminAuth() { isAdmin = (sessionStorage.getItem(ADMIN_CONFIG.storageKey)==='authenticated'); updateAdminUI(); }
@@ -613,8 +654,25 @@
       });
     }
 
-    function selectFormToFill(id) {
-      if(!forms[id]) return; currentFormId = id;
+    async function selectFormToFill(id) {
+      // If the form isn't in memory yet (e.g. shared link on a fresh device), retry a fetch first.
+      if (!forms[id]) {
+        const d = await jsonbinGet();
+        forms = d.forms || forms; responses = d.responses || responses;
+        renderAvailableForms();
+      }
+      if (!forms[id]) {
+        const list = document.getElementById('available-forms-list');
+        list.classList.remove('hidden');
+        document.getElementById('active-fill-container').classList.add('hidden');
+        list.innerHTML = `<div class="info-box warning" style="text-align:center;">
+          <strong>⚠️ Modulo non trovato</strong><br>
+          Il link potrebbe essere scaduto, il modulo è stato eliminato oppure non c'è connessione al server.<br>
+          <small style="opacity:0.7">ID: ${esc(id)}</small>
+        </div>`;
+        return;
+      }
+      currentFormId = id;
       document.getElementById('available-forms-list').classList.add('hidden');
       document.getElementById('active-fill-container').classList.remove('hidden');
       loadFormToFill(id);
