@@ -57,7 +57,14 @@
       pointer-events: none; z-index: -1;
     }
 
-    body { display: flex; justify-content: center; padding: 1rem 0.5rem env(safe-area-inset-bottom); }
+    body {
+      display: flex; justify-content: center;
+      padding:
+        calc(env(safe-area-inset-top) + 1rem)
+        calc(env(safe-area-inset-right) + 0.5rem)
+        calc(env(safe-area-inset-bottom) + 1rem)
+        calc(env(safe-area-inset-left) + 0.5rem);
+    }
     .app-container { width: 100%; max-width: 680px; position: relative; padding-bottom: 2rem; }
 
     /*  MAIN CONTAINER (Black Liquid Glass) */
@@ -113,7 +120,7 @@
     /* Tabs */
     .tabs {
       display: flex; gap: 0.5rem; margin-bottom: 1.2rem;
-      position: sticky; top: 0.5rem; z-index: 10; padding: 0.4rem;
+      position: sticky; top: calc(env(safe-area-inset-top) + 0.5rem); z-index: 10; padding: 0.4rem;
       background: rgba(10, 10, 14, 0.85);
       backdrop-filter: blur(20px);
       -webkit-backdrop-filter: blur(20px);
@@ -296,6 +303,37 @@
     }
     .logout-btn { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 0.75rem; padding: 0.2rem 0.4rem; }
 
+    /* Call Supervisor (tel:) */
+    .call-supervisor {
+      margin-top: 1.5rem;
+      padding-top: 1rem;
+      border-top: 1px solid rgba(255,255,255,0.06);
+      display: flex; justify-content: center;
+    }
+    .call-btn {
+      width: 100%;
+      text-decoration: none;
+      padding: 1rem 1.2rem;
+      font-size: 0.95rem;
+      letter-spacing: 0.3px;
+      color: #fff;
+      background: linear-gradient(135deg, rgba(0,60,30,0.9), rgba(0,30,15,0.95));
+    }
+    .call-btn::before {
+      background: linear-gradient(90deg, var(--rgb-2), var(--rgb-3), var(--rgb-2));
+      background-size: 200% 100%;
+    }
+    .call-btn .call-icon {
+      font-size: 1.1rem;
+      animation: callPulse 1.8s ease-in-out infinite;
+      display: inline-block;
+    }
+    @keyframes callPulse {
+      0%, 100% { transform: rotate(0deg) scale(1); }
+      25% { transform: rotate(-12deg) scale(1.08); }
+      75% { transform: rotate(12deg) scale(1.08); }
+    }
+
     .install-prompt {
       position: fixed; bottom: 15px; left: 50%; transform: translateX(-50%);
       background: #111; border: 1px solid var(--rgb-3);
@@ -319,7 +357,7 @@
   <div class="app-container">
     <div class="glass-capsule rgb-border">
       <h1>🚄 TrainReport</h1>
-      <p class="subtitle">Black Liquid Edition</p>
+      <p class="subtitle">Created By Germani Daniel</p>
       
       <div class="tabs">
         <div class="tab locked" data-view="create" id="tab-create">🛠 Crea</div>
@@ -388,6 +426,14 @@
           <button class="btn btn-danger" onclick="clearAllData()" style="padding:0.3rem 0.6rem; font-size:0.7rem;">🗑 Reset</button>
         </div>
         <div id="responses-list"></div>
+      </div>
+
+      <!-- Call supervisor (always visible at the bottom of the main screen) -->
+      <div class="call-supervisor">
+        <a class="btn call-btn" href="tel:+393513902303" aria-label="Chiama Capo Squadra al +39 351 390 2303">
+          <span class="call-icon" aria-hidden="true">📞</span>
+          <span>Chiama Capo Squadra</span>
+        </a>
       </div>
     </div>
   </div>
