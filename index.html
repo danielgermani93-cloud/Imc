@@ -8,7 +8,15 @@
   <!-- PWA Meta -->
   <meta name="theme-color" content="#000000">
   <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="TrainReport">
+
+  <!-- App Icons -->
+  <link rel="icon" type="image/png" href="icon.png">
+  <link rel="shortcut icon" type="image/png" href="icon.png">
+  <link rel="apple-touch-icon" href="icon.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="icon.png">
   
   <style>
     :root {
@@ -403,17 +411,67 @@
     const AVAILABLE_RESPONSES = ['Ok', 'RINV', 'RINV CAVI CAF', 'MANCANZA 13 POLI', 'RINV MANCANZA SCORTE', 'CAF'];
 
     // 🔹 PWA SETUP
+    const FALLBACK_ICON_SVG = "data:image/svg+xml," + encodeURIComponent(
+      `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'>
+        <defs>
+          <linearGradient id='g' x1='0' y1='0' x2='1' y2='1'>
+            <stop offset='0%' stop-color='#0a3b8f'/>
+            <stop offset='60%' stop-color='#ff6a00'/>
+            <stop offset='100%' stop-color='#b33000'/>
+          </linearGradient>
+        </defs>
+        <rect width='192' height='192' rx='36' fill='url(#g)'/>
+        <text x='50%' y='58%' dominant-baseline='middle' text-anchor='middle' font-size='96'>🚄</text>
+        <text x='50%' y='86%' dominant-baseline='middle' text-anchor='middle' font-size='34'>🔧</text>
+      </svg>`
+    );
     const manifest = {
-      name: "TrainReport", short_name: "TrainReport", start_url: "/", display: "standalone",
+      name: "TrainReport", short_name: "TrainReport", start_url: ".", scope: ".", display: "standalone",
       background_color: "#000000", theme_color: "#000000",
-      icons: [{ src: "image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect fill='%23000' width='192' height='192'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-size='80'%3E🚄%3C/text%3E%3C/svg%3E", sizes: "192x192", type: "image/svg+xml" }]
+      icons: [
+        { src: "icon.png", sizes: "192x192", type: "image/png", purpose: "any" },
+        { src: "icon.png", sizes: "512x512", type: "image/png", purpose: "any" },
+        { src: "icon.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
+        { src: FALLBACK_ICON_SVG, sizes: "192x192", type: "image/svg+xml" }
+      ]
     };
     document.getElementById('manifest-link').href = URL.createObjectURL(new Blob([JSON.stringify(manifest)], {type: 'application/json'}));
+
+    // Register a minimal same-origin service worker so the browser considers the app installable.
+    if ('serviceWorker' in navigator) {
+      const swCode = `
+        const CACHE = 'trainreport-v1';
+        self.addEventListener('install', e => {
+          self.skipWaiting();
+          e.waitUntil(caches.open(CACHE).then(c => c.addAll(['./', './icon.png']).catch(() => {})));
+        });
+        self.addEventListener('activate', e => { e.waitUntil(self.clients.claim()); });
+        self.addEventListener('fetch', e => {
+          if (e.request.method !== 'GET') return;
+          e.respondWith(
+            caches.match(e.request).then(hit => hit || fetch(e.request).then(res => {
+              const copy = res.clone();
+              if (res.ok && new URL(e.request.url).origin === location.origin) {
+                caches.open(CACHE).then(c => c.put(e.request, copy)).catch(() => {});
+              }
+              return res;
+            }).catch(() => caches.match('./')))
+          );
+        });
+      `;
+      const swUrl = URL.createObjectURL(new Blob([swCode], { type: 'application/javascript' }));
+      navigator.serviceWorker.register(swUrl, { scope: './' }).catch(() => {});
+    }
 
     let deferredPrompt;
     window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); deferredPrompt = e; document.getElementById('install-prompt').classList.remove('hidden'); });
     async function installPWA() { if(deferredPrompt) { deferredPrompt.prompt(); await deferredPrompt.userChoice; deferredPrompt=null; document.getElementById('install-prompt').classList.add('hidden'); } }
     function dismissInstall() { document.getElementById('install-prompt').classList.add('hidden'); }
+
+    // 🔹 HTML escape helper — use for every user-controlled string written via innerHTML.
+    function esc(v) {
+      return String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
 
     // 🔹 STATE & AUTH
     let forms = {}, responses = {}, currentFormId = null, carriageCount = 0, isAdmin = false, editingFormId = null;
@@ -475,9 +533,9 @@
       ids.forEach(id => {
         const f = forms[id]; const respCount = (responses[id]||[]).length;
         const card = document.createElement('div'); card.className = 'form-card';
-        card.innerHTML = `<div class="form-title">${f.title}</div>
-          <div class="form-meta"><span>📅 ${new Date(f.created).toLocaleDateString()}</span><span>📊 ${respCount} risposte</span></div>
-          <div style="font-family:monospace; font-size:0.6rem; color:#555; margin-top:0.2rem">ID: ${id}</div>`;
+        card.innerHTML = `<div class="form-title">${esc(f.title)}</div>
+          <div class="form-meta"><span>📅 ${esc(new Date(f.created).toLocaleDateString())}</span><span>📊 ${respCount} risposte</span></div>
+          <div style="font-family:monospace; font-size:0.6rem; color:#555; margin-top:0.2rem">ID: ${esc(id)}</div>`;
         card.onclick = () => selectFormToFill(id); container.appendChild(card);
       });
     }
@@ -505,12 +563,14 @@
       ids.forEach(id => {
         const f = forms[id];
         const div = document.createElement('div'); div.className = 'form-card'; div.style.cursor='default';
-        div.innerHTML = `<div class="form-title">${f.title}</div>
-          <div class="form-meta"><span>📅 ${new Date(f.created).toLocaleDateString()}</span><span>📊 ${(responses[id]||[]).length}</span></div>
+        div.innerHTML = `<div class="form-title">${esc(f.title)}</div>
+          <div class="form-meta"><span>📅 ${esc(new Date(f.created).toLocaleDateString())}</span><span>📊 ${(responses[id]||[]).length}</span></div>
           <div style="display:flex; gap:0.5rem; margin-top:0.5rem;">
-            <button class="btn btn-secondary" style="flex:1; padding:0.5rem; margin:0; font-size:0.8rem;" onclick="editForm('${id}')">✏️</button>
-            <button class="btn btn-danger" style="flex:1; padding:0.5rem; margin:0; font-size:0.8rem;" onclick="deleteForm('${id}')">🗑</button>
+            <button class="btn btn-secondary" data-action="edit" style="flex:1; padding:0.5rem; margin:0; font-size:0.8rem;">✏️</button>
+            <button class="btn btn-danger" data-action="delete" style="flex:1; padding:0.5rem; margin:0; font-size:0.8rem;">🗑</button>
           </div>`;
+        div.querySelector('[data-action="edit"]').onclick = () => editForm(id);
+        div.querySelector('[data-action="delete"]').onclick = () => deleteForm(id);
         container.appendChild(div);
       });
     }
@@ -540,20 +600,34 @@
     function addCarriageBuilder(name='', issues=[]) {
       const container = document.getElementById('carriages-builder-container');
       const idx = carriageCount++; const div = document.createElement('div'); div.className = 'carriage-builder';
-      let issuesHTML = '';
-      issues.forEach(iss => { issuesHTML += `<div class="issue-pill" data-name="${iss.name}" data-allowed='${JSON.stringify(iss.allowed)}'>
-        <span><span class="issue-name">${iss.name}</span> <span class="issue-resps">(${iss.allowed.length})</span></span>
-        <span class="remove-issue" onclick="this.parentElement.remove()">×</span></div>`; });
 
       div.innerHTML = `<div class="carriage-header"><h3>🚃 Vettura #${idx+1}</h3>
-        <button class="btn btn-danger" onclick="this.closest('.carriage-builder').remove()" style="padding:0.2rem 0.5rem; font-size:0.7rem; margin:0;">🗑</button></div>
-        <input type="text" class="input-field c-name" placeholder="Nome Vettura" value="${name}" style="margin:0.2rem 0; padding:0.6rem;">
+        <button class="btn btn-danger" data-action="remove-carriage" style="padding:0.2rem 0.5rem; font-size:0.7rem; margin:0;">🗑</button></div>
+        <input type="text" class="input-field c-name" placeholder="Nome Vettura" value="${esc(name)}" style="margin:0.2rem 0; padding:0.6rem;">
         <div class="issues-section"><span class="signals-label">📝 Segnalazione & Risposte</span>
           <input type="text" class="input-field issue-input" placeholder="Nome (es. Porta guasta)" style="margin:0.2rem 0; padding:0.6rem;">
-          <div class="responses-grid">${AVAILABLE_RESPONSES.map(r => `<label class="resp-check"><input type="checkbox" value="${r}"><span>${r}</span></label>`).join('')}</div>
-          <button class="btn btn-secondary" onclick="addIssueToBuilder(this)" style="margin-top:0.4rem; width:100%; padding:0.5rem; font-size:0.8rem;">➕ Aggiungi</button>
-          <div class="issues-container">${issuesHTML}</div></div>`;
+          <div class="responses-grid">${AVAILABLE_RESPONSES.map(r => `<label class="resp-check"><input type="checkbox" value="${esc(r)}"><span>${esc(r)}</span></label>`).join('')}</div>
+          <button class="btn btn-secondary" data-action="add-issue" style="margin-top:0.4rem; width:100%; padding:0.5rem; font-size:0.8rem;">➕ Aggiungi</button>
+          <div class="issues-container"></div></div>`;
+
+      div.querySelector('[data-action="remove-carriage"]').onclick = () => div.remove();
+      div.querySelector('[data-action="add-issue"]').onclick = e => addIssueToBuilder(e.currentTarget);
+
+      const issuesContainer = div.querySelector('.issues-container');
+      issues.forEach(iss => issuesContainer.appendChild(buildIssuePill(iss.name, iss.allowed)));
+
       container.appendChild(div);
+    }
+
+    function buildIssuePill(name, allowed) {
+      const pill = document.createElement('div');
+      pill.className = 'issue-pill';
+      pill.dataset.name = name;
+      pill.dataset.allowed = JSON.stringify(allowed);
+      pill.innerHTML = `<span><span class="issue-name"></span> <span class="issue-resps">(${allowed.length})</span></span><span class="remove-issue">×</span>`;
+      pill.querySelector('.issue-name').textContent = name;
+      pill.querySelector('.remove-issue').onclick = () => pill.remove();
+      return pill;
     }
 
     function addIssueToBuilder(btn) {
@@ -561,60 +635,96 @@
       const checked = Array.from(sec.querySelectorAll('.resp-check input:checked')).map(i=>i.value);
       const name = inp.value.trim();
       if(!name) return alert('Nome richiesto'); if(checked.length===0) return alert('Seleziona almeno 1 risposta');
-      const cont = sec.querySelector('.issues-container'); const pill = document.createElement('div');
-      pill.className = 'issue-pill'; pill.dataset.name = name; pill.dataset.allowed = JSON.stringify(checked);
-      pill.innerHTML = `<span><span class="issue-name">${name}</span> <span class="issue-resps">(${checked.length})</span></span><span class="remove-issue" onclick="this.parentElement.remove()">×</span>`;
-      cont.appendChild(pill); inp.value=''; sec.querySelectorAll('.resp-check input').forEach(i=>i.checked=false);
+      const cont = sec.querySelector('.issues-container');
+      const existing = Array.from(cont.querySelectorAll('.issue-pill')).some(p => p.dataset.name.toLowerCase() === name.toLowerCase());
+      if(existing) return alert('Segnalazione già presente');
+      cont.appendChild(buildIssuePill(name, checked));
+      inp.value=''; sec.querySelectorAll('.resp-check input').forEach(i=>i.checked=false);
     }
 
     async function saveForm() {
       const title = document.getElementById('form-title').value.trim() || 'Modulo Segnalazioni';
       const lTrain = document.getElementById('label-train').value.trim() || 'N. Treno';
       const lTrack = document.getElementById('label-track').value.trim() || 'Binario';
+      const builders = Array.from(document.querySelectorAll('.carriage-builder'));
+      if(builders.length===0) return alert('Aggiungi almeno una vettura!');
+
       const carriages = [];
-      document.querySelectorAll('.carriage-builder').forEach(div => {
-        const name = div.querySelector('.c-name').value.trim() || `Vettura ${carriages.length+1}`;
+      for(let i=0; i<builders.length; i++) {
+        const div = builders[i];
+        const name = div.querySelector('.c-name').value.trim() || `Vettura ${i+1}`;
         const issues = Array.from(div.querySelectorAll('.issues-container .issue-pill')).map(p => ({ name: p.dataset.name, allowed: JSON.parse(p.dataset.allowed) }));
-        if(issues.length===0) { alert(`Aggiungi segnalazione per "${name}"`); return; }
+        if(issues.length===0) { alert(`Aggiungi almeno una segnalazione per "${name}"`); return; }
         carriages.push({ name, issues });
-      });
-      if(carriages.length===0) return alert('Aggiungi almeno una vettura!');
+      }
 
       const id = editingFormId || 'f_' + Date.now().toString(36);
       if(!responses[id]) responses[id] = [];
-      forms[id] = { title, labelTrain: lTrain, labelTrack: lTrack, carriages, created: editingFormId ? forms[id].created : new Date().toISOString() };
+      forms[id] = { title, labelTrain: lTrain, labelTrack: lTrack, carriages, created: editingFormId && forms[id] ? forms[id].created : new Date().toISOString() };
       await jsonbinSave({ forms, responses });
       editingFormId = null;
-      
+
       document.getElementById('carriages-builder-container').innerHTML = ''; carriageCount = 0;
       document.getElementById('form-title').value = '';
       document.getElementById('share-area').classList.remove('hidden');
-      
+
       const url = `${window.location.origin}${window.location.pathname}?form=${id}`;
       document.getElementById('share-link').textContent = url;
       document.getElementById('wa-share-btn').href = `https://wa.me/?text=${encodeURIComponent(`📋 *${title}*\n👉 ${url}`)}`;
       document.getElementById('share-area').scrollIntoView({ behavior: 'smooth' });
       renderFormManager(); renderAvailableForms();
     }
-    function copyLink() { navigator.clipboard.writeText(document.getElementById('share-link').textContent).then(()=>alert('✅ Copiato!')); }
+
+    async function copyLink() {
+      const text = document.getElementById('share-link').textContent;
+      try {
+        if (navigator.clipboard && window.isSecureContext) {
+          await navigator.clipboard.writeText(text);
+        } else {
+          const ta = document.createElement('textarea');
+          ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+          document.body.appendChild(ta); ta.select();
+          const ok = document.execCommand('copy');
+          document.body.removeChild(ta);
+          if (!ok) throw new Error('execCommand copy failed');
+        }
+        alert('✅ Copiato!');
+      } catch {
+        alert('⚠️ Copia automatica non disponibile. Link: ' + text);
+      }
+    }
 
     function loadFormToFill(id) {
       currentFormId = id; const f = forms[id];
       document.getElementById('fill-title').textContent = f.title;
       document.getElementById('fill-train').placeholder = f.labelTrain;
       document.getElementById('fill-track').placeholder = f.labelTrack;
+      document.getElementById('fill-train').value = '';
+      document.getElementById('fill-track').value = '';
       const container = document.getElementById('fill-carriages'); container.innerHTML = '';
       f.carriages.forEach((c, ci) => {
         const sec = document.createElement('div'); sec.className = 'carriage-section';
-        sec.innerHTML = `<div class="carriage-title">🚃 ${c.name}</div>`;
+        const title = document.createElement('div'); title.className = 'carriage-title';
+        title.textContent = `🚃 ${c.name}`;
+        sec.appendChild(title);
         c.issues.forEach((iss, ii) => {
           const block = document.createElement('div'); block.className = 'issue-fill-block';
-          block.innerHTML = `<div class="issue-fill-label">⚠️ ${iss.name}</div><div class="radio-capsule-group" data-ii="${ii}"></div>`;
-          const group = block.querySelector('.radio-capsule-group');
+          const label = document.createElement('div'); label.className = 'issue-fill-label';
+          label.textContent = `⚠️ ${iss.name}`;
+          block.appendChild(label);
+          const group = document.createElement('div'); group.className = 'radio-capsule-group';
+          group.dataset.ii = ii;
           const gName = `r_${ci}_${ii}`;
           iss.allowed.forEach((resp, ri) => {
-            group.innerHTML += `<div class="radio-capsule"><input type="radio" name="${gName}" id="${gName}_${ri}" value="${resp}"><label for="${gName}_${ri}">${resp}</label></div>`;
+            const wrap = document.createElement('div'); wrap.className = 'radio-capsule';
+            const inp = document.createElement('input');
+            inp.type = 'radio'; inp.name = gName; inp.id = `${gName}_${ri}`; inp.value = resp;
+            const lbl = document.createElement('label');
+            lbl.htmlFor = `${gName}_${ri}`; lbl.textContent = resp;
+            wrap.appendChild(inp); wrap.appendChild(lbl);
+            group.appendChild(wrap);
           });
+          block.appendChild(group);
           sec.appendChild(block);
         });
         container.appendChild(sec);
@@ -649,21 +759,39 @@
       if(all.length===0) { list.innerHTML='<div class="info-box" style="text-align:center;padding:2rem;">📭 Nessun dato.</div>'; return; }
       let count=0;
       for(const fid in responses) { if(!forms[fid]) continue;
-        responses[fid].forEach(resp => { count++; const card = document.createElement('div'); card.className = 'response-card';
-          let html = `<div class="resp-meta"><span><strong>${forms[fid].title}</strong> <span class="badge">#${count}</span></span><span>🕐 ${new Date(resp.date).toLocaleString()}</span></div>
+        responses[fid].forEach((resp, respIdx) => { count++; const card = document.createElement('div'); card.className = 'response-card';
+          let html = `<div class="resp-meta">
+              <span><strong>${esc(forms[fid].title)}</strong> <span class="badge">#${count}</span></span>
+              <span style="display:flex; align-items:center; gap:0.4rem;">
+                <span>🕐 ${esc(new Date(resp.date).toLocaleString())}</span>
+                <button class="btn btn-danger" data-action="del-resp" style="padding:0.15rem 0.45rem; margin:0; font-size:0.7rem;">🗑</button>
+              </span>
+            </div>
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.4rem; margin-bottom:0.6rem;">
-              <div class="resp-field"><span class="resp-label">${forms[fid].labelTrain}:</span> <strong>${resp.train}</strong></div>
-              <div class="resp-field"><span class="resp-label">${forms[fid].labelTrack}:</span> <strong>${resp.track}</strong></div>
+              <div class="resp-field"><span class="resp-label">${esc(forms[fid].labelTrain)}:</span> <strong>${esc(resp.train)}</strong></div>
+              <div class="resp-field"><span class="resp-label">${esc(forms[fid].labelTrack)}:</span> <strong>${esc(resp.track)}</strong></div>
             </div>`;
           resp.carriages.forEach(c => {
             const isOk = c.selected==='Ok';
+            const carriage = forms[fid].carriages[c.ci];
+            const carriageName = carriage ? carriage.name : '(vettura rimossa)';
             html += `<div style="margin:0.3rem 0; padding-left:0.5rem; border-left:2px solid var(--accent-glow);">
-              <div style="color:var(--rgb-3); font-weight:500; margin-bottom:0.1rem; font-size:0.75rem;">🚃 ${forms[fid].carriages[c.ci].name} → ${c.issueName}</div>
-              <span class="result-tag ${isOk?'':'warn'}">${c.selected}</span></div>`;
+              <div style="color:var(--rgb-3); font-weight:500; margin-bottom:0.1rem; font-size:0.75rem;">🚃 ${esc(carriageName)} → ${esc(c.issueName)}</div>
+              <span class="result-tag ${isOk?'':'warn'}">${esc(c.selected)}</span></div>`;
           });
-          card.innerHTML = html; list.appendChild(card);
+          card.innerHTML = html;
+          card.querySelector('[data-action="del-resp"]').onclick = () => deleteResponse(fid, respIdx);
+          list.appendChild(card);
         });
       }
+    }
+
+    async function deleteResponse(fid, idx) {
+      if(!isAdmin || !responses[fid] || !responses[fid][idx]) return;
+      if(!confirm('⚠️ Eliminare questa risposta?')) return;
+      responses[fid].splice(idx, 1);
+      await jsonbinSave({ forms, responses });
+      renderDashboard(); renderAvailableForms(); renderFormManager();
     }
 
     async function clearAllData() {
