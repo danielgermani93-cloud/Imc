@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>TrainReport - Black Liquid Edition</title>
+  
+  <!-- PWA Meta -->
+  <meta name="theme-color" content="#000000">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  
+  <style>
+    :root {
+      --bg-deep: #020205;
+      --glass-black: rgba(20, 20, 25, 0.65);
+      --glass-darker: rgba(10, 10, 12, 0.85);
+      --glass-border: rgba(255, 255, 255, 0.08);
+      --text-main: #ffffff;
+      --text-muted: #888899;
+      --accent-glow: rgba(0, 212, 255, 0.2);
+      
+      /* RGB Colors */
+      --rgb-1: #ff0055;
+      --rgb-2: #00ff99;
+      --rgb-3: #00d4ff;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    html, body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background: var(--bg-deep);
+      color: var(--text-main);
+      min-height: 100dvh;
+      overflow-x: hidden;
+    }
+    
+    /* Sfondo Tecnico con Luci Ambientali */
+    body::before {
+      content: ''; position: fixed; top: -20%; left: -20%;
+      width: 60vw; height: 60vw;
+      background: radial-gradient(circle, rgba(0,212,255,0.08) 0%, transparent 70%);
+      pointer-events: none; z-index: -1;
+    }
+    body::after {
+      content: ''; position: fixed; bottom: -20%; right: -20%;
+      width: 60vw; height: 60vw;
+      background: radial-gradient(circle, rgba(255,0,85,0.06) 0%, transparent 70%);
+      pointer-events: none; z-index: -1;
+    }
+
+    body { display: flex; justify-content: center; padding: 1rem 0.5rem; }
+    .app-container { width: 100%; max-width: 680px; position: relative; padding-bottom: 2rem; }
+    
+    /*  MAIN CONTAINER (Black Liquid Glass) */
+    .glass-capsule {
+      background: var(--glass-black);
+      backdrop-filter: blur(25px);
+      -webkit-backdrop-filter: blur(25px);
+      border-radius: 40px;
+      padding: 1.2rem;
+      box-shadow: 0 15px 40px rgba(0,0,0,0.8), inset 0 1px 1px rgba(255,255,255,0.15);
+      position: relative;
+      overflow: hidden;
+      max-height: calc(100dvh - 2rem);
+      overflow-y: auto;
+      scrollbar-width: none; /* Hide scrollbar for cleaner look */
+    }
+    .glass-capsule::-webkit-scrollbar { display: none; }
+
+    /* ✨ RGB Border Animation Logic */
+    .rgb-border {
+      position: relative;
+      z-index: 1;
+      background: var(--glass-darker);
+      border-radius: 40px; /* Default */
+      overflow: hidden;
+    }
+    /* L'effetto RGB scorrevole */
+    .rgb-border::before {
+      content: '';
+      position: absolute;
+      inset: -3px;
+      z-index: -2;
+      border-radius: inherit;
+      background: linear-gradient(90deg, var(--rgb-1), var(--rgb-2), var(--rgb-3), var(--rgb-1));
+      background-size: 300% 100%;
+      animation: rgbFlow 4s linear infinite;
+      opacity: 0.8;
+    }
+    /* Maschera interna per far vedere solo il bordo */
+    .rgb-border::after {
+      content: '';
+      position: absolute;
+      inset: 2px; /* Spessore del bordo RGB */
+      z-index: -1;
+      background: var(--glass-black);
+      border-radius: inherit;
+      box-shadow: inset 0 1px 1px rgba(255,255,255,0.1);
+    }
+    @keyframes rgbFlow {
+      0% { background-position: 0% 50%; }
+      100% { background-position: 300% 50%; }
+    }
+
+    h1 { text-align: center; margin-bottom: 0.2rem; font-weight: 700; letter-spacing: 1px; font-size: 1.4rem; text-transform: uppercase; text-shadow: 0 0 10px rgba(255,255,255,0.3); }
+    .subtitle { text-align: center; color: var(--text-muted); margin-bottom: 1.2rem; font-size: 0.75rem; letter-spacing: 2px; text-transform: uppercase; }
+    
+    /* Tabs */
+    .tabs { display: flex; gap: 0.5rem; margin-bottom: 1.2rem; position: sticky; top: 0; z-index: 10; padding-bottom: 0.5rem; }
+    .tab {
+      flex: 1; text-align: center; padding: 0.7rem; border-radius: 25px;
+      cursor: pointer; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05);
+      color: var(--text-muted); transition: all 0.3s; font-size: 0.8rem; position: relative;
+      font-weight: 500;
+    }
+    .tab:hover { color: #fff; background: rgba(255,255,255,0.08); }
+    .tab.active {
+      color: #fff;
+      background: rgba(0,0,0,0.8);
+      border: 1px solid var(--rgb-3);
+      box-shadow: 0 0 15px var(--accent-glow);
+    }
+    .tab.locked::after { content: '🔒'; position: absolute; top: 0.2rem; right: 0.5rem; font-size: 0.7rem; opacity: 0.5; }
+
+    /* Inputs Black Glass */
+    .input-field {
+      width: 100%; padding: 0.9rem 1.2rem; margin: 0.5rem 0;
+      background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 25px; color: #fff; font-size: 0.95rem;
+      outline: none; transition: all 0.3s;
+    }
+    .input-field:focus {
+      border-color: var(--rgb-3); box-shadow: 0 0 15px var(--accent-glow);
+      background: rgba(0, 0, 0, 0.6);
+    }
+    .input-field::placeholder { color: rgba(255,255,255,0.3); }
+
+    /* Buttons RGB Capsule */
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem;
+      padding: 0.9rem 1.5rem; margin: 0.5rem 0.2rem; border: none; border-radius: 30px;
+      background: linear-gradient(135deg, rgba(20,20,20,0.9), rgba(40,40,40,0.9));
+      color: #fff; font-weight: 600; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; font-size: 0.9rem;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+    }
+    .btn::before {
+      content: ''; position: absolute; inset: 0; border-radius: 30px; padding: 2px;
+      background: linear-gradient(90deg, var(--rgb-1), var(--rgb-2), var(--rgb-3), var(--rgb-1));
+      background-size: 300% 100%;
+      animation: rgbFlow 4s linear infinite;
+      -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+      -webkit-mask-composite: xor; mask-composite: exclude;
+    }
+    .btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0, 212, 255, 0.3); }
+    .btn:active { transform: scale(0.97); }
+    
+    .btn-danger { color: var(--rgb-1); }
+    .btn-danger::before { background: linear-gradient(90deg, var(--rgb-1), #550000, var(--rgb-1)); background-size: 200%; }
+    .btn-secondary { color: var(--text-muted); }
+    .btn-secondary::before { background: linear-gradient(90deg, #333, #666, #333); }
+
+    /* Builder & Cards */
+    .carriage-builder {
+      background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 20px; padding: 1rem; margin: 0.8rem 0;
+    }
+    .carriage-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.6rem; }
+    .carriage-header h3 { font-size: 0.9rem; color: var(--rgb-2); margin: 0; text-shadow: 0 0 5px rgba(0,255,153,0.5); }
+    
+    .issues-section {
+      background: rgba(0,0,0,0.3); border: 1px dashed rgba(255,255,255,0.1);
+      border-radius: 15px; padding: 0.8rem; margin-top: 0.8rem;
+    }
+    .signals-label { display: block; color: var(--rgb-3); font-weight: 600; font-size: 0.75rem; margin-bottom: 0.4rem; text-transform: uppercase; }
+    .responses-grid { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0.5rem 0; }
+    .resp-check {
+      display: flex; align-items: center; gap: 0.3rem; padding: 0.3rem 0.6rem;
+      background: rgba(255,255,255,0.05); border-radius: 15px; cursor: pointer;
+      font-size: 0.75rem; border: 1px solid rgba(255,255,255,0.1);
+    }
+    .resp-check input:checked + span { color: var(--rgb-2); text-shadow: 0 0 5px var(--rgb-2); }
+
+    .issues-container { margin-top: 0.5rem; display: flex; flex-direction: column; gap: 0.4rem; }
+    .issue-pill {
+      display: flex; justify-content: space-between; align-items: center;
+      background: rgba(255,255,255,0.05); padding: 0.4rem 0.7rem; border-radius: 15px;
+      border: 1px solid rgba(255,255,255,0.1); font-size: 0.8rem;
+    }
+    .issue-pill .issue-name { font-weight: 500; }
+    .issue-pill .issue-resps { font-size: 0.65rem; color: var(--text-muted); }
+    .issue-pill .remove-issue { cursor: pointer; color: var(--rgb-1); margin-left: 0.5rem; font-weight: bold; }
+
+    /* Form List Cards */
+    .form-card {
+      background: rgba(20,20,20,0.6); border: 1px solid rgba(255,255,255,0.05);
+      border-radius: 20px; padding: 0.9rem; margin: 0.5rem 0; cursor: pointer;
+      transition: all 0.3s; position: relative; overflow: hidden;
+    }
+    .form-card:hover { background: rgba(30,30,30,0.8); border-color: rgba(0, 212, 255, 0.3); }
+    .form-card .form-title { font-weight: 600; color: #fff; margin-bottom: 0.2rem; }
+    .form-card .form-meta { font-size: 0.7rem; color: var(--text-muted); display: flex; justify-content: space-between; }
+    
+    .back-btn {
+      display: inline-flex; align-items: center; gap: 0.3rem; margin-bottom: 0.8rem;
+      background: none; border: none; color: var(--rgb-3); cursor: pointer; font-size: 0.85rem;
+      text-decoration: none;
+    }
+
+    /* Fill Radio Capsules */
+    .carriage-section { margin: 1rem 0; padding-bottom: 0.8rem; border-bottom: 1px solid rgba(255,255,255,0.05); }
+    .carriage-title { font-size: 0.95rem; margin-bottom: 0.6rem; color: var(--rgb-2); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+    .issue-fill-block { margin-bottom: 0.8rem; }
+    .issue-fill-label { font-size: 0.85rem; margin-bottom: 0.3rem; color: rgba(255,255,255,0.8); }
+    .radio-capsule-group { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+    .radio-capsule { position: relative; }
+    .radio-capsule input { position: absolute; opacity: 0; cursor: pointer; }
+    .radio-capsule label {
+      display: block; padding: 0.5rem 0.8rem; border-radius: 20px;
+      background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+      cursor: pointer; transition: all 0.2s ease; font-size: 0.8rem; user-select: none;
+    }
+    .radio-capsule input:checked + label {
+      background: rgba(0, 212, 255, 0.15); border-color: var(--rgb-3);
+      color: #fff; box-shadow: 0 0 10px var(--accent-glow);
+    }
+
+    /* Dashboard & Responses */
+    .response-card {
+      background: rgba(20,20,20,0.4); border: 1px solid rgba(255,255,255,0.05);
+      border-radius: 20px; padding: 0.8rem; margin: 0.5rem 0;
+      border-left: 3px solid var(--rgb-3);
+    }
+    .resp-meta { display: flex; justify-content: space-between; margin-bottom: 0.4rem; color: var(--text-muted); font-size: 0.75rem; }
+    .resp-field { margin: 0.2rem 0; }
+    .resp-label { color: var(--rgb-3); font-weight: 500; }
+    .badge { display: inline-block; padding: 0.1rem 0.3rem; border-radius: 10px; background: rgba(255,255,255,0.1); color: #fff; font-size: 0.65rem; }
+    .result-tag { display: inline-block; margin: 0.1rem 0.2rem 0 0; padding: 0.2rem 0.5rem; background: rgba(0, 255, 153, 0.1); border: 1px solid var(--rgb-2); border-radius: 10px; font-size: 0.75rem; color: var(--rgb-2); }
+    .result-tag.warn { background: rgba(255, 0, 85, 0.1); border-color: var(--rgb-1); color: var(--rgb-1); }
+
+    .hidden { display: none !important; }
+    
+    .share-box {
+      text-align: center; margin-top: 1rem; padding: 1rem;
+      background: rgba(255,255,255,0.03); border-radius: 20px; border: 1px dashed rgba(255,255,255,0.1);
+    }
+    .link-display {
+      background: #000; padding: 0.5rem; border-radius: 10px;
+      margin: 0.5rem 0; word-break: break-all; font-family: monospace;
+      font-size: 0.75rem; color: var(--rgb-3); border: 1px solid rgba(255,255,255,0.1);
+    }
+    .info-box {
+      background: rgba(0, 212, 255, 0.05); border: 1px solid rgba(0, 212, 255, 0.2);
+      border-radius: 15px; padding: 0.7rem; margin: 0.8rem 0; font-size: 0.8rem;
+    }
+    .info-box.warning { background: rgba(255, 0, 85, 0.05); border-color: rgba(255, 0, 85, 0.2); }
+    .info-box.warning strong { color: var(--rgb-1); }
+
+    .modal-overlay {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.85); backdrop-filter: blur(5px);
+      display: flex; justify-content: center; align-items: center; z-index: 1000;
+      opacity: 0; pointer-events: none; transition: opacity 0.3s;
+    }
+    .modal-overlay.show { opacity: 1; pointer-events: auto; }
+    .modal {
+      background: #111; border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 25px; padding: 1.5rem; width: 90%; max-width: 350px; text-align: center;
+    }
+    .modal-buttons { display: flex; gap: 0.5rem; justify-content: center; margin-top: 1rem; }
+    .error-msg { color: var(--rgb-1); font-size: 0.8rem; margin-top: 0.4rem; min-height: 1rem; }
+    .admin-badge {
+      display: inline-flex; align-items: center; gap: 0.2rem;
+      background: rgba(0, 255, 153, 0.1); color: var(--rgb-2);
+      padding: 0.2rem 0.5rem; border-radius: 10px; font-size: 0.7rem; margin-left: 0.4rem;
+    }
+    .logout-btn { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 0.75rem; padding: 0.2rem 0.4rem; }
+
+    .install-prompt {
+      position: fixed; bottom: 15px; left: 50%; transform: translateX(-50%);
+      background: #111; border: 1px solid var(--rgb-3);
+      border-radius: 25px; padding: 0.8rem 1.2rem; display: flex; gap: 0.8rem;
+      align-items: center; box-shadow: 0 0 20px rgba(0, 212, 255, 0.2);
+      z-index: 999; width: 90%; max-width: 350px;
+    }
+    .install-prompt span { flex: 1; font-size: 0.85rem; color: #fff; }
+    .install-prompt button { padding: 0.3rem 0.7rem; font-size: 0.8rem; border-radius: 15px; }
+
+    @media (max-width: 480px) {
+      .glass-capsule { border-radius: 30px; padding: 1rem; }
+      .tabs { gap: 0.3rem; }
+      .tab { padding: 0.6rem; font-size: 0.75rem; }
+      .btn { width: 100%; margin: 0.4rem 0; }
+    }
+  </style>
+  <link id="manifest-link" rel="manifest">
+</head>
+<body>
+  <div class="app-container">
+    <div class="glass-capsule rgb-border">
+      <h1>🚄 TrainReport</h1>
+      <p class="subtitle">Black Liquid Edition</p>
+      
+      <div class="tabs">
+        <div class="tab locked" data-view="create" id="tab-create">🛠 Crea</div>
+        <div class="tab active" data-view="fill" id="tab-fill">📝 Compila</div>
+        <div class="tab locked" data-view="dashboard" id="tab-dashboard">📊 Risposte</div>
+      </div>
+
+      <div id="admin-status" class="hidden" style="text-align: right; margin-bottom: 0.4rem;">
+        <span class="admin-badge">🔐 ADMIN</span>
+        <button class="logout-btn" onclick="logout()">Esci</button>
+      </div>
+
+      <!-- VIEW: CREATE (ADMIN) -->
+      <div id="view-create" class="hidden">
+        <div class="info-box warning"><strong>🔐 AREA AMMINISTRATIVA</strong><br>Gestisci, modifica o elimina i moduli.</div>
+        
+        <div id="form-manager" class="hidden" style="margin-bottom: 1rem;">
+          <div style="font-size: 0.8rem; color: var(--rgb-2); margin-bottom: 0.5rem; text-transform: uppercase;">📂 Moduli Salvati</div>
+          <div id="admin-forms-list"></div>
+        </div>
+
+        <div class="info-box"><strong> Crea Nuovo Modulo</strong><br>Definisci vetture e segnalazioni.</div>
+        
+        <input type="text" id="form-title" class="input-field" placeholder="Titolo Modulo" value="Controllo Tecnico">
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.5rem;">
+          <input type="text" id="label-train" class="input-field" value="N. Treno" placeholder="Label Treno">
+          <input type="text" id="label-track" class="input-field" value="Binario" placeholder="Label Binario">
+        </div>
+        
+        <div id="carriages-builder-container"></div>
+        
+        <button class="btn" style="width:100%" onclick="addCarriageBuilder()">🚃 + Aggiungi Vettura</button>
+        <button class="btn" style="width:100%" onclick="saveForm()">💾 Salva Modulo</button>
+        
+        <div id="share-area" class="share-box hidden">
+          <h3>✅ Modulo Pronto</h3>
+          <div class="link-display" id="share-link"></div>
+          <a id="wa-share-btn" class="btn" href="#" target="_blank" style="width:100%">📱 Invia su WhatsApp</a>
+          <button class="btn btn-secondary" onclick="copyLink()" style="width:100%">📋 Copia Link</button>
+        </div>
+      </div>
+
+      <!-- VIEW: FILL -->
+      <div id="view-fill">
+        <div id="available-forms-list"></div>
+        
+        <div id="active-fill-container" class="hidden">
+          <button class="back-btn" onclick="backToFormList()">← Torna alla lista</button>
+          <div class="info-box"><strong>📝 Compila Segnalazione</strong><br>Inserisci N. Treno e seleziona lo stato.</div>
+          <h2 id="fill-title" style="text-align:center; margin:0.8rem 0; font-size:1.2rem;">...</h2>
+          
+          <div style="display:grid; grid-template-columns: 2fr 1fr; gap:0.5rem;">
+            <input type="text" id="fill-train" class="input-field" placeholder="N. Treno">
+            <input type="text" id="fill-track" class="input-field" placeholder="Binario">
+          </div>
+          
+          <div id="fill-carriages"></div>
+          <button class="btn" style="width:100%" onclick="submitResponse()">🚀 Invia Segnalazione</button>
+        </div>
+      </div>
+
+      <!-- VIEW: DASHBOARD (ADMIN) -->
+      <div id="view-dashboard" class="hidden">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.8rem;">
+          <h2 style="margin:0; font-size:1rem; color:var(--rgb-2);">📊 Dati Ricevuti</h2>
+          <button class="btn btn-danger" onclick="clearAllData()" style="padding:0.3rem 0.6rem; font-size:0.7rem;">🗑 Reset</button>
+        </div>
+        <div id="responses-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="install-prompt" class="install-prompt hidden">
+    <span>📲 Installa TrainReport</span>
+    <button class="btn" onclick="installPWA()">Installa</button>
+    <button class="btn btn-secondary" onclick="dismissInstall()">✕</button>
+  </div>
+
+  <div id="login-modal" class="modal-overlay">
+    <div class="modal">
+      <h3 style="color:var(--rgb-3)">🔐 Admin Access</h3>
+      <input type="password" id="admin-password" class="input-field" placeholder="Password">
+      <div class="error-msg" id="login-error"></div>
+      <div class="modal-buttons">
+        <button class="btn btn-secondary" onclick="closeLoginModal()">Annulla</button>
+        <button class="btn" onclick="checkPassword()">Accedi</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // 🔹 CONFIG
+    const JSONBIN_CONFIG = {
+      apiKey: '$2a$10$tVUGmLSwGE0L2AnvZ3Abm.tTBK0rCWTBA6iTZUiZFubuPozhm9iMy',
+      binId: '69e4c3b7856a6821894da11a',
+      baseUrl: 'https://api.jsonbin.io/v3/b'
+    };
+    const ADMIN_CONFIG = { password: 'Qwerty1993', storageKey: 'tr_admin_auth' };
+    const AVAILABLE_RESPONSES = ['Ok', 'RINV', 'RINV CAVI CAF', 'MANCANZA 13 POLI', 'RINV MANCANZA SCORTE', 'CAF'];
+
+    // 🔹 PWA SETUP
+    const manifest = {
+      name: "TrainReport", short_name: "TrainReport", start_url: "/", display: "standalone",
+      background_color: "#000000", theme_color: "#000000",
+      icons: [{ src: "image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect fill='%23000' width='192' height='192'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-size='80'%3E🚄%3C/text%3E%3C/svg%3E", sizes: "192x192", type: "image/svg+xml" }]
+    };
+    document.getElementById('manifest-link').href = URL.createObjectURL(new Blob([JSON.stringify(manifest)], {type: 'application/json'}));
+
+    let deferredPrompt;
+    window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); deferredPrompt = e; document.getElementById('install-prompt').classList.remove('hidden'); });
+    async function installPWA() { if(deferredPrompt) { deferredPrompt.prompt(); await deferredPrompt.userChoice; deferredPrompt=null; document.getElementById('install-prompt').classList.add('hidden'); } }
+    function dismissInstall() { document.getElementById('install-prompt').classList.add('hidden'); }
+
+    // 🔹 STATE & AUTH
+    let forms = {}, responses = {}, currentFormId = null, carriageCount = 0, isAdmin = false, editingFormId = null;
+    
+    async function jsonbinGet() {
+      try { const res = await fetch(`${JSONBIN_CONFIG.baseUrl}/${JSONBIN_CONFIG.binId}`, { headers: { 'X-Access-Key': JSONBIN_CONFIG.apiKey } }); return (await res.json()).record; } 
+      catch { return { forms: JSON.parse(localStorage.getItem('tr_forms')||'{}'), responses: JSON.parse(localStorage.getItem('tr_responses')||'{}') }; }
+    }
+    async function jsonbinSave(data) {
+      try { await fetch(`${JSONBIN_CONFIG.baseUrl}/${JSONBIN_CONFIG.binId}`, { method:'PUT', headers:{'X-Access-Key':JSONBIN_CONFIG.apiKey,'Content-Type':'application/json','X-Master-Key':JSONBIN_CONFIG.apiKey}, body:JSON.stringify(data) }); }
+      catch { localStorage.setItem('tr_forms',JSON.stringify(data.forms)); localStorage.setItem('tr_responses',JSON.stringify(data.responses)); }
+    }
+
+    function checkAdminAuth() { isAdmin = (sessionStorage.getItem(ADMIN_CONFIG.storageKey)==='authenticated'); updateAdminUI(); }
+    function setAdminAuth(v) { v ? sessionStorage.setItem(ADMIN_CONFIG.storageKey,'authenticated') : sessionStorage.removeItem(ADMIN_CONFIG.storageKey); isAdmin=v; updateAdminUI(); }
+    function updateAdminUI() {
+      document.getElementById('admin-status').classList.toggle('hidden', !isAdmin);
+      document.getElementById('tab-create').classList.toggle('locked', !isAdmin);
+      document.getElementById('tab-dashboard').classList.toggle('locked', !isAdmin);
+      if(!isAdmin && document.querySelector('.tab.active')?.dataset.view!=='fill') document.querySelector('[data-view="fill"]').click();
+    }
+    function openLoginModal(target) {
+      document.getElementById('login-modal').classList.add('show');
+      document.getElementById('admin-password').value=''; document.getElementById('login-error').textContent='';
+      document.getElementById('admin-password').dataset.target=target; document.getElementById('admin-password').focus();
+      document.getElementById('admin-password').onkeypress=e=>e.key==='Enter'&&checkPassword();
+    }
+    function closeLoginModal() { document.getElementById('login-modal').classList.remove('show'); }
+    function checkPassword() {
+      if(document.getElementById('admin-password').value===ADMIN_CONFIG.password) {
+        setAdminAuth(true); closeLoginModal();
+        const t=document.getElementById('admin-password').dataset.target;
+        if(t&&t!=='fill') document.querySelector(`[data-view="${t}"]`)?.click();
+      } else { document.getElementById('login-error').textContent='❌ Password errata'; }
+    }
+    function logout() { if(confirm('Uscire?')) { setAdminAuth(false); document.querySelector('[data-view="fill"]').click(); } }
+
+    async function initData() {
+      const d = await jsonbinGet(); forms = d.forms || {}; responses = d.responses || {};
+      checkAdminAuth(); renderAvailableForms(); if(isAdmin) renderFormManager();
+    }
+
+    document.querySelectorAll('.tab').forEach(tab => {
+      tab.addEventListener('click', e => {
+        const v=tab.dataset.view;
+        if((v==='create'||v==='dashboard')&&!isAdmin) { e.preventDefault(); openLoginModal(v); return; }
+        document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active')); tab.classList.add('active');
+        document.querySelectorAll('[id^="view-"]').forEach(el=>el.classList.add('hidden'));
+        document.getElementById(`view-${v}`).classList.remove('hidden');
+        if(v==='dashboard') renderDashboard();
+        if(v==='create') renderFormManager();
+      });
+    });
+
+    function renderAvailableForms() {
+      const container = document.getElementById('available-forms-list'); container.innerHTML = '';
+      const ids = Object.keys(forms);
+      if(ids.length===0) { container.innerHTML = '<div class="info-box" style="text-align:center;padding:2rem;">📭 Nessun modulo disponibile.</div>'; return; }
+      ids.forEach(id => {
+        const f = forms[id]; const respCount = (responses[id]||[]).length;
+        const card = document.createElement('div'); card.className = 'form-card';
+        card.innerHTML = `<div class="form-title">${f.title}</div>
+          <div class="form-meta"><span>📅 ${new Date(f.created).toLocaleDateString()}</span><span>📊 ${respCount} risposte</span></div>
+          <div style="font-family:monospace; font-size:0.6rem; color:#555; margin-top:0.2rem">ID: ${id}</div>`;
+        card.onclick = () => selectFormToFill(id); container.appendChild(card);
+      });
+    }
+
+    function selectFormToFill(id) {
+      if(!forms[id]) return; currentFormId = id;
+      document.getElementById('available-forms-list').classList.add('hidden');
+      document.getElementById('active-fill-container').classList.remove('hidden');
+      loadFormToFill(id);
+    }
+    function backToFormList() {
+      currentFormId = null;
+      document.getElementById('available-forms-list').classList.remove('hidden');
+      document.getElementById('active-fill-container').classList.add('hidden');
+      document.getElementById('fill-carriages').innerHTML = '';
+      document.getElementById('fill-train').value = ''; document.getElementById('fill-track').value = '';
+    }
+
+    function renderFormManager() {
+      const container = document.getElementById('admin-forms-list'); container.innerHTML = '';
+      const section = document.getElementById('form-manager');
+      const ids = Object.keys(forms);
+      if(ids.length===0) { section.classList.add('hidden'); return; }
+      section.classList.remove('hidden');
+      ids.forEach(id => {
+        const f = forms[id];
+        const div = document.createElement('div'); div.className = 'form-card'; div.style.cursor='default';
+        div.innerHTML = `<div class="form-title">${f.title}</div>
+          <div class="form-meta"><span>📅 ${new Date(f.created).toLocaleDateString()}</span><span>📊 ${(responses[id]||[]).length}</span></div>
+          <div style="display:flex; gap:0.5rem; margin-top:0.5rem;">
+            <button class="btn btn-secondary" style="flex:1; padding:0.5rem; margin:0; font-size:0.8rem;" onclick="editForm('${id}')">✏️</button>
+            <button class="btn btn-danger" style="flex:1; padding:0.5rem; margin:0; font-size:0.8rem;" onclick="deleteForm('${id}')">🗑</button>
+          </div>`;
+        container.appendChild(div);
+      });
+    }
+
+    function editForm(id) {
+      if(!forms[id]) return; editingFormId = id; const f = forms[id];
+      document.getElementById('form-title').value = f.title;
+      document.getElementById('label-train').value = f.labelTrain;
+      document.getElementById('label-track').value = f.labelTrack;
+      document.getElementById('carriages-builder-container').innerHTML = ''; carriageCount = 0;
+      f.carriages.forEach(c => addCarriageBuilder(c.name, c.issues.map(i => ({name:i.name, allowed:i.allowed}))));
+      document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+      document.getElementById('tab-create').classList.add('active');
+      document.querySelectorAll('[id^="view-"]').forEach(el=>el.classList.add('hidden'));
+      document.getElementById('view-create').classList.remove('hidden');
+      document.getElementById('share-area').classList.add('hidden');
+    }
+
+    async function deleteForm(id) {
+      if(!confirm('⚠️ Eliminare modulo e risposte?')) return;
+      delete forms[id]; delete responses[id];
+      await jsonbinSave({forms, responses});
+      renderFormManager(); renderAvailableForms();
+      if(editingFormId===id) { editingFormId=null; document.getElementById('carriages-builder-container').innerHTML=''; carriageCount=0; }
+    }
+
+    function addCarriageBuilder(name='', issues=[]) {
+      const container = document.getElementById('carriages-builder-container');
+      const idx = carriageCount++; const div = document.createElement('div'); div.className = 'carriage-builder';
+      let issuesHTML = '';
+      issues.forEach(iss => { issuesHTML += `<div class="issue-pill" data-name="${iss.name}" data-allowed='${JSON.stringify(iss.allowed)}'>
+        <span><span class="issue-name">${iss.name}</span> <span class="issue-resps">(${iss.allowed.length})</span></span>
+        <span class="remove-issue" onclick="this.parentElement.remove()">×</span></div>`; });
+
+      div.innerHTML = `<div class="carriage-header"><h3>🚃 Vettura #${idx+1}</h3>
+        <button class="btn btn-danger" onclick="this.closest('.carriage-builder').remove()" style="padding:0.2rem 0.5rem; font-size:0.7rem; margin:0;">🗑</button></div>
+        <input type="text" class="input-field c-name" placeholder="Nome Vettura" value="${name}" style="margin:0.2rem 0; padding:0.6rem;">
+        <div class="issues-section"><span class="signals-label">📝 Segnalazione & Risposte</span>
+          <input type="text" class="input-field issue-input" placeholder="Nome (es. Porta guasta)" style="margin:0.2rem 0; padding:0.6rem;">
+          <div class="responses-grid">${AVAILABLE_RESPONSES.map(r => `<label class="resp-check"><input type="checkbox" value="${r}"><span>${r}</span></label>`).join('')}</div>
+          <button class="btn btn-secondary" onclick="addIssueToBuilder(this)" style="margin-top:0.4rem; width:100%; padding:0.5rem; font-size:0.8rem;">➕ Aggiungi</button>
+          <div class="issues-container">${issuesHTML}</div></div>`;
+      container.appendChild(div);
+    }
+
+    function addIssueToBuilder(btn) {
+      const sec = btn.closest('.issues-section'); const inp = sec.querySelector('.issue-input');
+      const checked = Array.from(sec.querySelectorAll('.resp-check input:checked')).map(i=>i.value);
+      const name = inp.value.trim();
+      if(!name) return alert('Nome richiesto'); if(checked.length===0) return alert('Seleziona almeno 1 risposta');
+      const cont = sec.querySelector('.issues-container'); const pill = document.createElement('div');
+      pill.className = 'issue-pill'; pill.dataset.name = name; pill.dataset.allowed = JSON.stringify(checked);
+      pill.innerHTML = `<span><span class="issue-name">${name}</span> <span class="issue-resps">(${checked.length})</span></span><span class="remove-issue" onclick="this.parentElement.remove()">×</span>`;
+      cont.appendChild(pill); inp.value=''; sec.querySelectorAll('.resp-check input').forEach(i=>i.checked=false);
+    }
+
+    async function saveForm() {
+      const title = document.getElementById('form-title').value.trim() || 'Modulo Segnalazioni';
+      const lTrain = document.getElementById('label-train').value.trim() || 'N. Treno';
+      const lTrack = document.getElementById('label-track').value.trim() || 'Binario';
+      const carriages = [];
+      document.querySelectorAll('.carriage-builder').forEach(div => {
+        const name = div.querySelector('.c-name').value.trim() || `Vettura ${carriages.length+1}`;
+        const issues = Array.from(div.querySelectorAll('.issues-container .issue-pill')).map(p => ({ name: p.dataset.name, allowed: JSON.parse(p.dataset.allowed) }));
+        if(issues.length===0) { alert(`Aggiungi segnalazione per "${name}"`); return; }
+        carriages.push({ name, issues });
+      });
+      if(carriages.length===0) return alert('Aggiungi almeno una vettura!');
+
+      const id = editingFormId || 'f_' + Date.now().toString(36);
+      if(!responses[id]) responses[id] = [];
+      forms[id] = { title, labelTrain: lTrain, labelTrack: lTrack, carriages, created: editingFormId ? forms[id].created : new Date().toISOString() };
+      await jsonbinSave({ forms, responses });
+      editingFormId = null;
+      
+      document.getElementById('carriages-builder-container').innerHTML = ''; carriageCount = 0;
+      document.getElementById('form-title').value = '';
+      document.getElementById('share-area').classList.remove('hidden');
+      
+      const url = `${window.location.origin}${window.location.pathname}?form=${id}`;
+      document.getElementById('share-link').textContent = url;
+      document.getElementById('wa-share-btn').href = `https://wa.me/?text=${encodeURIComponent(`📋 *${title}*\n👉 ${url}`)}`;
+      document.getElementById('share-area').scrollIntoView({ behavior: 'smooth' });
+      renderFormManager(); renderAvailableForms();
+    }
+    function copyLink() { navigator.clipboard.writeText(document.getElementById('share-link').textContent).then(()=>alert('✅ Copiato!')); }
+
+    function loadFormToFill(id) {
+      currentFormId = id; const f = forms[id];
+      document.getElementById('fill-title').textContent = f.title;
+      document.getElementById('fill-train').placeholder = f.labelTrain;
+      document.getElementById('fill-track').placeholder = f.labelTrack;
+      const container = document.getElementById('fill-carriages'); container.innerHTML = '';
+      f.carriages.forEach((c, ci) => {
+        const sec = document.createElement('div'); sec.className = 'carriage-section';
+        sec.innerHTML = `<div class="carriage-title">🚃 ${c.name}</div>`;
+        c.issues.forEach((iss, ii) => {
+          const block = document.createElement('div'); block.className = 'issue-fill-block';
+          block.innerHTML = `<div class="issue-fill-label">⚠️ ${iss.name}</div><div class="radio-capsule-group" data-ii="${ii}"></div>`;
+          const group = block.querySelector('.radio-capsule-group');
+          const gName = `r_${ci}_${ii}`;
+          iss.allowed.forEach((resp, ri) => {
+            group.innerHTML += `<div class="radio-capsule"><input type="radio" name="${gName}" id="${gName}_${ri}" value="${resp}"><label for="${gName}_${ri}">${resp}</label></div>`;
+          });
+          sec.appendChild(block);
+        });
+        container.appendChild(sec);
+      });
+    }
+
+    async function submitResponse() {
+      if(!currentFormId) return;
+      const train = document.getElementById('fill-train').value.trim();
+      const track = document.getElementById('fill-track').value.trim();
+      if(!train||!track) return alert('⚠️ Inserisci Treno e Binario');
+      const carriageData = []; let valid = true;
+      document.querySelectorAll('.carriage-section').forEach((sec, ci) => {
+        sec.querySelectorAll('.radio-capsule-group').forEach(group => {
+          const ii = group.dataset.ii; const checked = group.querySelector('input:checked');
+          if(!checked) valid = false;
+          const issueName = forms[currentFormId].carriages[ci].issues[ii].name;
+          carriageData.push({ ci, ii, issueName, selected: checked ? checked.value : null });
+        });
+      });
+      if(!valid) return alert('⚠️ Seleziona una risposta per OGNI voce');
+      responses[currentFormId].push({ train, track, carriages: carriageData, date: new Date().toISOString() });
+      await jsonbinSave({ forms, responses });
+      alert('✅ Inviato!');
+      document.querySelectorAll('#fill-carriages input:checked').forEach(i=>i.checked=false);
+      document.getElementById('fill-train').value=''; document.getElementById('fill-track').value='';
+    }
+
+    function renderDashboard() {
+      if(!isAdmin) return; const list = document.getElementById('responses-list'); list.innerHTML = '';
+      const all = Object.values(responses).flat();
+      if(all.length===0) { list.innerHTML='<div class="info-box" style="text-align:center;padding:2rem;">📭 Nessun dato.</div>'; return; }
+      let count=0;
+      for(const fid in responses) { if(!forms[fid]) continue;
+        responses[fid].forEach(resp => { count++; const card = document.createElement('div'); card.className = 'response-card';
+          let html = `<div class="resp-meta"><span><strong>${forms[fid].title}</strong> <span class="badge">#${count}</span></span><span>🕐 ${new Date(resp.date).toLocaleString()}</span></div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.4rem; margin-bottom:0.6rem;">
+              <div class="resp-field"><span class="resp-label">${forms[fid].labelTrain}:</span> <strong>${resp.train}</strong></div>
+              <div class="resp-field"><span class="resp-label">${forms[fid].labelTrack}:</span> <strong>${resp.track}</strong></div>
+            </div>`;
+          resp.carriages.forEach(c => {
+            const isOk = c.selected==='Ok';
+            html += `<div style="margin:0.3rem 0; padding-left:0.5rem; border-left:2px solid var(--accent-glow);">
+              <div style="color:var(--rgb-3); font-weight:500; margin-bottom:0.1rem; font-size:0.75rem;">🚃 ${forms[fid].carriages[c.ci].name} → ${c.issueName}</div>
+              <span class="result-tag ${isOk?'':'warn'}">${c.selected}</span></div>`;
+          });
+          card.innerHTML = html; list.appendChild(card);
+        });
+      }
+    }
+
+    async function clearAllData() {
+      if(!isAdmin) return; if(confirm('⚠️ Cancellare TUTTO?')) {
+        forms={}; responses={}; editingFormId=null;
+        await jsonbinSave({forms,responses});
+        renderDashboard(); renderFormManager(); renderAvailableForms();
+        document.getElementById('carriages-builder-container').innerHTML=''; carriageCount=0;
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', async () => {
+      await initData();
+      const p = new URLSearchParams(window.location.search);
+      if(p.has('form')) selectFormToFill(p.get('form'));
+    });
+  </script>
+</body>
+</html>
