@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content">
   <title>TrainReport - Black Liquid Edition</title>
   
   <!-- PWA Meta -->
@@ -57,9 +57,9 @@
       pointer-events: none; z-index: -1;
     }
 
-    body { display: flex; justify-content: center; padding: 1rem 0.5rem; }
+    body { display: flex; justify-content: center; padding: 1rem 0.5rem env(safe-area-inset-bottom); }
     .app-container { width: 100%; max-width: 680px; position: relative; padding-bottom: 2rem; }
-    
+
     /*  MAIN CONTAINER (Black Liquid Glass) */
     .glass-capsule {
       background: var(--glass-black);
@@ -69,12 +69,8 @@
       padding: 1.2rem;
       box-shadow: 0 15px 40px rgba(0,0,0,0.8), inset 0 1px 1px rgba(255,255,255,0.15);
       position: relative;
-      overflow: hidden;
-      max-height: calc(100dvh - 2rem);
-      overflow-y: auto;
-      scrollbar-width: none; /* Hide scrollbar for cleaner look */
+      /* Natural page scroll: let the browser (and mobile keyboards) handle it. */
     }
-    .glass-capsule::-webkit-scrollbar { display: none; }
 
     /* ✨ RGB Border Animation Logic */
     .rgb-border {
@@ -115,7 +111,15 @@
     .subtitle { text-align: center; color: var(--text-muted); margin-bottom: 1.2rem; font-size: 0.75rem; letter-spacing: 2px; text-transform: uppercase; }
     
     /* Tabs */
-    .tabs { display: flex; gap: 0.5rem; margin-bottom: 1.2rem; position: sticky; top: 0; z-index: 10; padding-bottom: 0.5rem; }
+    .tabs {
+      display: flex; gap: 0.5rem; margin-bottom: 1.2rem;
+      position: sticky; top: 0.5rem; z-index: 10; padding: 0.4rem;
+      background: rgba(10, 10, 14, 0.85);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-radius: 30px;
+      border: 1px solid rgba(255,255,255,0.05);
+    }
     .tab {
       flex: 1; text-align: center; padding: 0.7rem; border-radius: 25px;
       cursor: pointer; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05);
@@ -135,8 +139,10 @@
     .input-field {
       width: 100%; padding: 0.9rem 1.2rem; margin: 0.5rem 0;
       background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(255,255,255,0.1);
-      border-radius: 25px; color: #fff; font-size: 0.95rem;
+      border-radius: 25px; color: #fff; font-size: 16px; /* 16px prevents iOS auto-zoom on focus */
       outline: none; transition: all 0.3s;
+      -webkit-user-select: text; user-select: text;
+      -webkit-appearance: none; appearance: none;
     }
     .input-field:focus {
       border-color: var(--rgb-3); box-shadow: 0 0 15px var(--accent-glow);
@@ -267,16 +273,20 @@
     .info-box.warning strong { color: var(--rgb-1); }
 
     .modal-overlay {
-      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(0,0,0,0.85); backdrop-filter: blur(5px);
-      display: flex; justify-content: center; align-items: center; z-index: 1000;
-      opacity: 0; pointer-events: none; transition: opacity 0.3s;
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.85);
+      display: none;
+      justify-content: center; align-items: center; z-index: 10000;
+      padding: 1rem;
+      overflow-y: auto;
     }
-    .modal-overlay.show { opacity: 1; pointer-events: auto; }
+    .modal-overlay.show { display: flex; }
     .modal {
       background: #111; border: 1px solid rgba(255,255,255,0.1);
-      border-radius: 25px; padding: 1.5rem; width: 90%; max-width: 350px; text-align: center;
+      border-radius: 25px; padding: 1.5rem; width: 100%; max-width: 350px; text-align: center;
+      margin: auto;
     }
+    .modal input { font-size: 16px; }
     .modal-buttons { display: flex; gap: 0.5rem; justify-content: center; margin-top: 1rem; }
     .error-msg { color: var(--rgb-1); font-size: 0.8rem; margin-top: 0.4rem; min-height: 1rem; }
     .admin-badge {
@@ -388,16 +398,16 @@
     <button class="btn btn-secondary" onclick="dismissInstall()">✕</button>
   </div>
 
-  <div id="login-modal" class="modal-overlay">
-    <div class="modal">
-      <h3 style="color:var(--rgb-3)">🔐 Admin Access</h3>
-      <input type="password" id="admin-password" class="input-field" placeholder="Password">
+  <div id="login-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="login-title">
+    <form class="modal" id="login-form" autocomplete="on">
+      <h3 id="login-title" style="color:var(--rgb-3)">🔐 Admin Access</h3>
+      <input type="password" id="admin-password" class="input-field" placeholder="Password" autocomplete="current-password" autocapitalize="off" autocorrect="off" spellcheck="false" inputmode="text" enterkeyhint="go">
       <div class="error-msg" id="login-error"></div>
       <div class="modal-buttons">
-        <button class="btn btn-secondary" onclick="closeLoginModal()">Annulla</button>
-        <button class="btn" onclick="checkPassword()">Accedi</button>
+        <button type="button" class="btn btn-secondary" id="login-cancel">Annulla</button>
+        <button type="submit" class="btn" id="login-submit">Accedi</button>
       </div>
-    </div>
+    </form>
   </div>
 
   <script>
@@ -494,20 +504,37 @@
       if(!isAdmin && document.querySelector('.tab.active')?.dataset.view!=='fill') document.querySelector('[data-view="fill"]').click();
     }
     function openLoginModal(target) {
-      document.getElementById('login-modal').classList.add('show');
-      document.getElementById('admin-password').value=''; document.getElementById('login-error').textContent='';
-      document.getElementById('admin-password').dataset.target=target; document.getElementById('admin-password').focus();
-      document.getElementById('admin-password').onkeypress=e=>e.key==='Enter'&&checkPassword();
+      const modal = document.getElementById('login-modal');
+      const input = document.getElementById('admin-password');
+      // Ensure the modal is a direct child of <body> so no ancestor stacking/transform can clip it.
+      if (modal.parentElement !== document.body) document.body.appendChild(modal);
+      modal.classList.add('show');
+      input.value = '';
+      document.getElementById('login-error').textContent = '';
+      input.dataset.target = target || '';
+      // Defer focus so iOS reliably opens the keyboard.
+      setTimeout(() => { input.focus(); try { input.click(); } catch {} }, 50);
     }
     function closeLoginModal() { document.getElementById('login-modal').classList.remove('show'); }
     function checkPassword() {
-      if(document.getElementById('admin-password').value===ADMIN_CONFIG.password) {
+      const input = document.getElementById('admin-password');
+      if(input.value === ADMIN_CONFIG.password) {
         setAdminAuth(true); closeLoginModal();
-        const t=document.getElementById('admin-password').dataset.target;
-        if(t&&t!=='fill') document.querySelector(`[data-view="${t}"]`)?.click();
-      } else { document.getElementById('login-error').textContent='❌ Password errata'; }
+        const t = input.dataset.target;
+        if(t && t !== 'fill') document.querySelector(`[data-view="${t}"]`)?.click();
+      } else {
+        document.getElementById('login-error').textContent = '❌ Password errata';
+        input.select();
+      }
     }
     function logout() { if(confirm('Uscire?')) { setAdminAuth(false); document.querySelector('[data-view="fill"]').click(); } }
+
+    // Wire login form: submit (Enter or tap "Accedi"), cancel button, and backdrop-click to close.
+    document.getElementById('login-form').addEventListener('submit', e => { e.preventDefault(); checkPassword(); });
+    document.getElementById('login-cancel').addEventListener('click', e => { e.preventDefault(); closeLoginModal(); });
+    document.getElementById('login-modal').addEventListener('click', e => {
+      if (e.target.id === 'login-modal') closeLoginModal();
+    });
 
     async function initData() {
       const d = await jsonbinGet(); forms = d.forms || {}; responses = d.responses || {};
