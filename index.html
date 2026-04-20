@@ -310,6 +310,73 @@
     }
     .logout-btn { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 0.75rem; padding: 0.2rem 0.4rem; }
 
+    /* Pre-Estiva form styling */
+    .form-type-row { display:flex; align-items:center; gap:0.5rem; margin: 0.5rem 0; }
+    .form-type-row label { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }
+    .pe-option {
+      display: flex; flex-direction: column; gap: 0.35rem;
+      padding: 0.55rem 0.75rem; margin: 0.35rem 0;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 16px;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .pe-option.checked {
+      background: rgba(0, 255, 153, 0.08);
+      border-color: var(--rgb-2);
+      box-shadow: 0 0 8px rgba(0, 255, 153, 0.15);
+    }
+    .pe-option-row { display: flex; align-items: center; gap: 0.5rem; cursor: pointer; }
+    .pe-option-row input[type="checkbox"] {
+      width: 20px; height: 20px; accent-color: var(--rgb-2); margin: 0; flex: 0 0 auto;
+    }
+    .pe-option-label { font-size: 0.9rem; font-weight: 600; color: #fff; line-height: 1.2; }
+    .pe-inputs { display: flex; flex-wrap: wrap; gap: 0.4rem; padding-left: 1.7rem; }
+    .pe-inputs.hidden { display: none; }
+    .pe-num-wrap {
+      display: flex; align-items: center; gap: 0.25rem;
+      background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 14px; padding: 0.2rem 0.6rem;
+    }
+    .pe-num-wrap label { font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+    .pe-num-wrap input {
+      background: transparent; border: none; color: #fff; outline: none;
+      width: 70px; font-size: 16px; padding: 0.25rem 0;
+    }
+    .pe-num-wrap .suffix { font-size: 0.75rem; color: var(--rgb-3); font-weight: 600; }
+    .pe-notes {
+      width: 100%; min-height: 60px; resize: vertical;
+      background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 16px; color: #fff; padding: 0.7rem 0.9rem;
+      font-size: 16px; font-family: inherit; margin-top: 0.5rem;
+    }
+    .pe-notes:focus { outline: none; border-color: var(--rgb-3); box-shadow: 0 0 10px var(--accent-glow); }
+    .pe-notes-label { display:block; font-size: 0.75rem; color: var(--rgb-3); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 0.6rem; }
+    .form-card .type-badge {
+      display: inline-block; margin-left: 0.4rem; padding: 0.1rem 0.45rem;
+      background: rgba(255, 170, 0, 0.12); color: #ffaa00;
+      border: 1px solid rgba(255, 170, 0, 0.3);
+      border-radius: 10px; font-size: 0.65rem; font-weight: 700; letter-spacing: 0.5px;
+    }
+
+    /* Draft toast & save indicator */
+    .draft-banner {
+      display: flex; gap: 0.5rem; align-items: center;
+      background: rgba(0, 255, 153, 0.08); border: 1px solid var(--rgb-2);
+      border-radius: 14px; padding: 0.55rem 0.8rem; margin: 0.5rem 0;
+      font-size: 0.8rem;
+    }
+    .draft-banner .spacer { flex: 1; }
+    .draft-indicator {
+      position: fixed; bottom: calc(env(safe-area-inset-bottom) + 16px); left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: rgba(0,0,0,0.85); border: 1px solid var(--rgb-2); color: var(--rgb-2);
+      padding: 0.4rem 0.8rem; border-radius: 18px;
+      font-size: 0.75rem; z-index: 900; pointer-events: none;
+      opacity: 0; transition: opacity 0.2s, transform 0.2s;
+    }
+    .draft-indicator.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
     /* Call Supervisor (tel:) */
     .call-supervisor {
       margin-top: 1.5rem;
@@ -389,11 +456,21 @@
         <div class="info-box"><strong> Crea Nuovo Modulo</strong><br>Definisci vetture e segnalazioni.</div>
         
         <input type="text" id="form-title" class="input-field" placeholder="Titolo Modulo" value="Controllo Tecnico">
+        <div class="form-type-row">
+          <label for="form-type">Tipo:</label>
+          <select id="form-type" class="input-field" style="margin:0; padding:0.6rem 0.9rem;">
+            <option value="standard">📝 Standard (segnalazioni)</option>
+            <option value="pre_estiva">🌞 Pre-Estiva (checklist climatizzazione)</option>
+          </select>
+        </div>
+        <div id="pre-estiva-hint" class="info-box hidden" style="font-size:0.8rem;">
+          ℹ️ Nei moduli <strong>pre-estivi</strong> le opzioni sono predefinite (flessibili, anaconda, reintegri Freon, vuoto, ecc.). Aggiungi solo i nomi delle vetture.
+        </div>
         <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.5rem;">
           <input type="text" id="label-train" class="input-field" value="N. Treno" placeholder="Label Treno">
           <input type="text" id="label-track" class="input-field" value="Binario" placeholder="Label Binario">
         </div>
-        
+
         <div id="carriages-builder-container"></div>
         
         <button class="btn" style="width:100%" onclick="addCarriageBuilder()">🚃 + Aggiungi Vettura</button>
@@ -413,7 +490,12 @@
         
         <div id="active-fill-container" class="hidden">
           <button class="back-btn" onclick="backToFormList()">← Torna alla lista</button>
-          <div class="info-box"><strong>📝 Compila Segnalazione</strong><br>Inserisci N. Treno e seleziona lo stato.</div>
+          <div id="fill-info-box" class="info-box"><strong>📝 Compila Segnalazione</strong><br>Inserisci N. Treno e seleziona lo stato.</div>
+          <div id="draft-banner" class="draft-banner hidden">
+            <span>💾 <strong>Bozza ripristinata</strong> — hai ripreso da dove avevi lasciato.</span>
+            <span class="spacer"></span>
+            <button class="btn btn-secondary" type="button" id="clear-draft-btn" style="padding:0.25rem 0.7rem; font-size:0.75rem; margin:0;">Svuota</button>
+          </div>
           <h2 id="fill-title" style="text-align:center; margin:0.8rem 0; font-size:1.2rem;">...</h2>
           
           <div style="display:grid; grid-template-columns: 2fr 1fr; gap:0.5rem;">
@@ -445,6 +527,8 @@
     </div>
   </div>
 
+  <div id="draft-indicator" class="draft-indicator" aria-live="polite">💾 Bozza salvata</div>
+
   <div id="install-prompt" class="install-prompt hidden">
     <span>📲 Installa TrainReport</span>
     <button class="btn" onclick="installPWA()">Installa</button>
@@ -472,6 +556,27 @@
     };
     const ADMIN_CONFIG = { password: 'Qwerty1993', storageKey: 'tr_admin_auth' };
     const AVAILABLE_RESPONSES = ['Ok', 'RINV', 'RINV CAVI CAF', 'MANCANZA 13 POLI', 'RINV MANCANZA SCORTE', 'CAF'];
+
+    // Checklist predefinita per i moduli PRE-ESTIVI (climatizzazione).
+    // Ogni voce con "inputs" abilita campi numerici (Kg) quando spuntata.
+    const PRE_ESTIVA_OPTIONS = [
+      { id: 'flex_ap',            label: 'Sostituito flessibile Ap' },
+      { id: 'flex_bp',            label: 'Sostituito flessibile Bp' },
+      { id: 'flex_apbp',          label: 'Eseguita sostituzione flessibile Ap/Bp' },
+      { id: 'flex_apbp_comune',   label: 'Eseguita sostituzione Ap/Bp ed eliminato comune' },
+      { id: 'filtro_deid',        label: 'Eseguita sostituzione filtro disidratatore' },
+      { id: 'olio_ok',            label: 'Olio Ok' },
+      { id: 'olio_reintegro',     label: 'Eseguito reintegro Olio' },
+      { id: 'anaconda_ap',        label: 'Sostituita Anaconda Ap' },
+      { id: 'anaconda_bp',        label: 'Sostituita Anaconda Bp' },
+      { id: 'freon_r134',         label: 'Reintegrato Freon R134',    inputs: [{ key: 'kg',   label: 'Quantità', suffix: 'Kg' }] },
+      { id: 'freon_513',          label: 'Reintegrato Freon 513',     inputs: [{ key: 'kg',   label: 'Quantità', suffix: 'Kg' }] },
+      { id: 'vuoto',              label: 'Effettuato Vuoto e riscontrato', inputs: [
+        { key: 'imp1', label: 'Impianto 1', suffix: 'Kg' },
+        { key: 'imp2', label: 'Impianto 2', suffix: 'Kg' }
+      ]}
+    ];
+    const PRE_ESTIVA_OPT_MAP = Object.fromEntries(PRE_ESTIVA_OPTIONS.map(o => [o.id, o]));
 
     // 🔹 PWA SETUP
     const FALLBACK_ICON_SVG = "data:image/svg+xml," + encodeURIComponent(
@@ -644,14 +749,18 @@
       const container = document.getElementById('available-forms-list'); container.innerHTML = '';
       const ids = Object.keys(forms);
       if(ids.length===0) { container.innerHTML = '<div class="info-box" style="text-align:center;padding:2rem;">📭 Nessun modulo disponibile.</div>'; return; }
+      const frag = document.createDocumentFragment();
       ids.forEach(id => {
         const f = forms[id]; const respCount = (responses[id]||[]).length;
+        const typeBadge = f.type === 'pre_estiva' ? '<span class="type-badge">🌞 PRE-ESTIVA</span>' : '';
         const card = document.createElement('div'); card.className = 'form-card';
-        card.innerHTML = `<div class="form-title">${esc(f.title)}</div>
+        card.innerHTML = `<div class="form-title">${esc(f.title)}${typeBadge}</div>
           <div class="form-meta"><span>📅 ${esc(new Date(f.created).toLocaleDateString())}</span><span>📊 ${respCount} risposte</span></div>
           <div style="font-family:monospace; font-size:0.6rem; color:#555; margin-top:0.2rem">ID: ${esc(id)}</div>`;
-        card.onclick = () => selectFormToFill(id); container.appendChild(card);
+        card.onclick = () => selectFormToFill(id);
+        frag.appendChild(card);
       });
+      container.appendChild(frag);
     }
 
     async function selectFormToFill(id) {
@@ -683,6 +792,8 @@
       document.getElementById('active-fill-container').classList.add('hidden');
       document.getElementById('fill-carriages').innerHTML = '';
       document.getElementById('fill-train').value = ''; document.getElementById('fill-track').value = '';
+      document.getElementById('draft-banner')?.classList.add('hidden');
+      renderAvailableForms();
     }
 
     function renderFormManager() {
@@ -691,10 +802,12 @@
       const ids = Object.keys(forms);
       if(ids.length===0) { section.classList.add('hidden'); return; }
       section.classList.remove('hidden');
+      const frag = document.createDocumentFragment();
       ids.forEach(id => {
         const f = forms[id];
+        const typeBadge = f.type === 'pre_estiva' ? '<span class="type-badge">🌞 PRE-ESTIVA</span>' : '';
         const div = document.createElement('div'); div.className = 'form-card'; div.style.cursor='default';
-        div.innerHTML = `<div class="form-title">${esc(f.title)}</div>
+        div.innerHTML = `<div class="form-title">${esc(f.title)}${typeBadge}</div>
           <div class="form-meta"><span>📅 ${esc(new Date(f.created).toLocaleDateString())}</span><span>📊 ${(responses[id]||[]).length}</span></div>
           <div style="display:flex; gap:0.5rem; margin-top:0.5rem;">
             <button class="btn btn-secondary" data-action="edit" style="flex:1; padding:0.5rem; margin:0; font-size:0.8rem;">✏️</button>
@@ -702,17 +815,20 @@
           </div>`;
         div.querySelector('[data-action="edit"]').onclick = () => editForm(id);
         div.querySelector('[data-action="delete"]').onclick = () => deleteForm(id);
-        container.appendChild(div);
+        frag.appendChild(div);
       });
+      container.appendChild(frag);
     }
 
     function editForm(id) {
       if(!forms[id]) return; editingFormId = id; const f = forms[id];
       document.getElementById('form-title').value = f.title;
+      document.getElementById('form-type').value = f.type || 'standard';
       document.getElementById('label-train').value = f.labelTrain;
       document.getElementById('label-track').value = f.labelTrack;
       document.getElementById('carriages-builder-container').innerHTML = ''; carriageCount = 0;
-      f.carriages.forEach(c => addCarriageBuilder(c.name, c.issues.map(i => ({name:i.name, allowed:i.allowed}))));
+      f.carriages.forEach(c => addCarriageBuilder(c.name, (c.issues||[]).map(i => ({name:i.name, allowed:i.allowed}))));
+      updateBuilderForType();
       document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
       document.getElementById('tab-create').classList.add('active');
       document.querySelectorAll('[id^="view-"]').forEach(el=>el.classList.add('hidden'));
@@ -720,12 +836,22 @@
       document.getElementById('share-area').classList.add('hidden');
     }
 
-    async function deleteForm(id) {
+    function deleteForm(id) {
       if(!confirm('⚠️ Eliminare modulo e risposte?')) return;
       delete forms[id]; delete responses[id];
-      await jsonbinSave({forms, responses});
+      queueRemoteSync();
       renderFormManager(); renderAvailableForms();
       if(editingFormId===id) { editingFormId=null; document.getElementById('carriages-builder-container').innerHTML=''; carriageCount=0; }
+    }
+
+    function getSelectedFormType() {
+      return document.getElementById('form-type')?.value || 'standard';
+    }
+
+    function updateBuilderForType() {
+      const isPE = getSelectedFormType() === 'pre_estiva';
+      document.getElementById('pre-estiva-hint').classList.toggle('hidden', !isPE);
+      document.querySelectorAll('.carriage-builder .issues-section').forEach(s => s.classList.toggle('hidden', isPE));
     }
 
     function addCarriageBuilder(name='', issues=[]) {
@@ -748,6 +874,7 @@
       issues.forEach(iss => issuesContainer.appendChild(buildIssuePill(iss.name, iss.allowed)));
 
       container.appendChild(div);
+      updateBuilderForType();
     }
 
     function buildIssuePill(name, allowed) {
@@ -773,8 +900,9 @@
       inp.value=''; sec.querySelectorAll('.resp-check input').forEach(i=>i.checked=false);
     }
 
-    async function saveForm() {
+    function saveForm() {
       const title = document.getElementById('form-title').value.trim() || 'Modulo Segnalazioni';
+      const type = getSelectedFormType();
       const lTrain = document.getElementById('label-train').value.trim() || 'N. Treno';
       const lTrack = document.getElementById('label-track').value.trim() || 'Binario';
       const builders = Array.from(document.querySelectorAll('.carriage-builder'));
@@ -784,19 +912,25 @@
       for(let i=0; i<builders.length; i++) {
         const div = builders[i];
         const name = div.querySelector('.c-name').value.trim() || `Vettura ${i+1}`;
-        const issues = Array.from(div.querySelectorAll('.issues-container .issue-pill')).map(p => ({ name: p.dataset.name, allowed: JSON.parse(p.dataset.allowed) }));
-        if(issues.length===0) { alert(`Aggiungi almeno una segnalazione per "${name}"`); return; }
-        carriages.push({ name, issues });
+        if (type === 'pre_estiva') {
+          carriages.push({ name });
+        } else {
+          const issues = Array.from(div.querySelectorAll('.issues-container .issue-pill')).map(p => ({ name: p.dataset.name, allowed: JSON.parse(p.dataset.allowed) }));
+          if(issues.length===0) { alert(`Aggiungi almeno una segnalazione per "${name}"`); return; }
+          carriages.push({ name, issues });
+        }
       }
 
       const id = editingFormId || 'f_' + Date.now().toString(36);
       if(!responses[id]) responses[id] = [];
-      forms[id] = { title, labelTrain: lTrain, labelTrack: lTrack, carriages, created: editingFormId && forms[id] ? forms[id].created : new Date().toISOString() };
-      await jsonbinSave({ forms, responses });
+      forms[id] = { title, type, labelTrain: lTrain, labelTrack: lTrack, carriages, created: editingFormId && forms[id] ? forms[id].created : new Date().toISOString() };
+      queueRemoteSync();
       editingFormId = null;
 
       document.getElementById('carriages-builder-container').innerHTML = ''; carriageCount = 0;
       document.getElementById('form-title').value = '';
+      document.getElementById('form-type').value = 'standard';
+      updateBuilderForType();
       document.getElementById('share-area').classList.remove('hidden');
 
       const url = `${window.location.origin}${window.location.pathname}?form=${id}`;
@@ -826,109 +960,447 @@
     }
 
     function loadFormToFill(id) {
-      currentFormId = id; const f = forms[id];
+      currentFormId = id;
+      const f = forms[id];
+      const type = f.type || 'standard';
       document.getElementById('fill-title').textContent = f.title;
       document.getElementById('fill-train').placeholder = f.labelTrain;
       document.getElementById('fill-track').placeholder = f.labelTrack;
       document.getElementById('fill-train').value = '';
       document.getElementById('fill-track').value = '';
-      const container = document.getElementById('fill-carriages'); container.innerHTML = '';
+      const info = document.getElementById('fill-info-box');
+      if (info) info.innerHTML = type === 'pre_estiva'
+        ? '<strong>🌞 Modulo Pre-Estivo</strong><br>Seleziona le operazioni effettuate per ogni vettura.'
+        : '<strong>📝 Compila Segnalazione</strong><br>Inserisci N. Treno e seleziona lo stato.';
+
+      const container = document.getElementById('fill-carriages');
+      container.innerHTML = '';
+      const frag = document.createDocumentFragment();
+
       f.carriages.forEach((c, ci) => {
-        const sec = document.createElement('div'); sec.className = 'carriage-section';
-        const title = document.createElement('div'); title.className = 'carriage-title';
+        const sec = document.createElement('div');
+        sec.className = 'carriage-section';
+        sec.dataset.ci = ci;
+
+        const title = document.createElement('div');
+        title.className = 'carriage-title';
         title.textContent = `🚃 ${c.name}`;
         sec.appendChild(title);
-        c.issues.forEach((iss, ii) => {
-          const block = document.createElement('div'); block.className = 'issue-fill-block';
-          const label = document.createElement('div'); label.className = 'issue-fill-label';
-          label.textContent = `⚠️ ${iss.name}`;
-          block.appendChild(label);
-          const group = document.createElement('div'); group.className = 'radio-capsule-group';
-          group.dataset.ii = ii;
-          const gName = `r_${ci}_${ii}`;
-          iss.allowed.forEach((resp, ri) => {
-            const wrap = document.createElement('div'); wrap.className = 'radio-capsule';
-            const inp = document.createElement('input');
-            inp.type = 'radio'; inp.name = gName; inp.id = `${gName}_${ri}`; inp.value = resp;
-            const lbl = document.createElement('label');
-            lbl.htmlFor = `${gName}_${ri}`; lbl.textContent = resp;
-            wrap.appendChild(inp); wrap.appendChild(lbl);
-            group.appendChild(wrap);
+
+        if (type === 'pre_estiva') {
+          renderPreEstivaCarriage(sec, ci);
+        } else {
+          (c.issues || []).forEach((iss, ii) => {
+            const block = document.createElement('div'); block.className = 'issue-fill-block';
+            const label = document.createElement('div'); label.className = 'issue-fill-label';
+            label.textContent = `⚠️ ${iss.name}`;
+            block.appendChild(label);
+            const group = document.createElement('div'); group.className = 'radio-capsule-group';
+            group.dataset.ii = ii;
+            const gName = `r_${ci}_${ii}`;
+            iss.allowed.forEach((resp, ri) => {
+              const wrap = document.createElement('div'); wrap.className = 'radio-capsule';
+              const inp = document.createElement('input');
+              inp.type = 'radio'; inp.name = gName; inp.id = `${gName}_${ri}`; inp.value = resp;
+              const lbl = document.createElement('label');
+              lbl.htmlFor = `${gName}_${ri}`; lbl.textContent = resp;
+              wrap.appendChild(inp); wrap.appendChild(lbl);
+              group.appendChild(wrap);
+            });
+            block.appendChild(group);
+            sec.appendChild(block);
           });
-          block.appendChild(group);
-          sec.appendChild(block);
-        });
-        container.appendChild(sec);
+        }
+
+        frag.appendChild(sec);
       });
+      container.appendChild(frag);
+
+      // Offer to restore any saved draft.
+      maybeOfferDraftRestore();
+    }
+
+    function renderPreEstivaCarriage(sec, ci) {
+      const frag = document.createDocumentFragment();
+      PRE_ESTIVA_OPTIONS.forEach(opt => {
+        const wrap = document.createElement('div');
+        wrap.className = 'pe-option';
+        wrap.dataset.optId = opt.id;
+
+        const row = document.createElement('label');
+        row.className = 'pe-option-row';
+        const cb = document.createElement('input');
+        cb.type = 'checkbox'; cb.dataset.optId = opt.id;
+        row.appendChild(cb);
+        const lab = document.createElement('span');
+        lab.className = 'pe-option-label'; lab.textContent = opt.label;
+        row.appendChild(lab);
+        wrap.appendChild(row);
+
+        if (opt.inputs && opt.inputs.length) {
+          const inputsWrap = document.createElement('div');
+          inputsWrap.className = 'pe-inputs hidden';
+          opt.inputs.forEach(inp => {
+            const w = document.createElement('div'); w.className = 'pe-num-wrap';
+            const l = document.createElement('label'); l.textContent = inp.label;
+            const n = document.createElement('input');
+            n.type = 'number'; n.step = 'any'; n.min = '0'; n.inputMode = 'decimal';
+            n.placeholder = '0,0'; n.dataset.key = inp.key;
+            const s = document.createElement('span'); s.className = 'suffix'; s.textContent = inp.suffix || '';
+            w.appendChild(l); w.appendChild(n); w.appendChild(s);
+            inputsWrap.appendChild(w);
+          });
+          wrap.appendChild(inputsWrap);
+
+          cb.addEventListener('change', () => {
+            wrap.classList.toggle('checked', cb.checked);
+            inputsWrap.classList.toggle('hidden', !cb.checked);
+            if (cb.checked) setTimeout(() => inputsWrap.querySelector('input')?.focus(), 40);
+          });
+        } else {
+          cb.addEventListener('change', () => wrap.classList.toggle('checked', cb.checked));
+        }
+
+        frag.appendChild(wrap);
+      });
+
+      // Notes textarea per vettura
+      const notesLabel = document.createElement('span');
+      notesLabel.className = 'pe-notes-label';
+      notesLabel.textContent = '🗒️ Note / Altre anomalie';
+      const notes = document.createElement('textarea');
+      notes.className = 'pe-notes';
+      notes.placeholder = 'Annota qui eventuali anomalie aggiuntive riscontrate su questa vettura...';
+      notes.dataset.ci = ci;
+
+      sec.appendChild(frag);
+      sec.appendChild(notesLabel);
+      sec.appendChild(notes);
     }
 
     async function submitResponse() {
       if(!currentFormId) return;
+      const form = forms[currentFormId];
+      const type = form.type || 'standard';
       const train = document.getElementById('fill-train').value.trim();
       const track = document.getElementById('fill-track').value.trim();
       if(!train||!track) return alert('⚠️ Inserisci Treno e Binario');
-      const carriageData = []; let valid = true;
-      document.querySelectorAll('.carriage-section').forEach((sec, ci) => {
-        sec.querySelectorAll('.radio-capsule-group').forEach(group => {
-          const ii = group.dataset.ii; const checked = group.querySelector('input:checked');
-          if(!checked) valid = false;
-          const issueName = forms[currentFormId].carriages[ci].issues[ii].name;
-          carriageData.push({ ci, ii, issueName, selected: checked ? checked.value : null });
+
+      const carriageData = [];
+      if (type === 'pre_estiva') {
+        document.querySelectorAll('#fill-carriages .carriage-section').forEach(sec => {
+          const ci = parseInt(sec.dataset.ci, 10);
+          const checks = {};
+          sec.querySelectorAll('.pe-option').forEach(opt => {
+            const id = opt.dataset.optId;
+            const cb = opt.querySelector('input[type="checkbox"]');
+            if (!cb.checked) return;
+            const nums = {};
+            opt.querySelectorAll('input[type="number"]').forEach(ni => {
+              const v = ni.value.trim();
+              if (v !== '') nums[ni.dataset.key] = v;
+            });
+            checks[id] = Object.keys(nums).length ? nums : true;
+          });
+          const notes = (sec.querySelector('textarea.pe-notes')?.value || '').trim();
+          carriageData.push({ ci, checks, notes });
         });
-      });
-      if(!valid) return alert('⚠️ Seleziona una risposta per OGNI voce');
-      responses[currentFormId].push({ train, track, carriages: carriageData, date: new Date().toISOString() });
-      await jsonbinSave({ forms, responses });
-      alert('✅ Inviato!');
-      document.querySelectorAll('#fill-carriages input:checked').forEach(i=>i.checked=false);
-      document.getElementById('fill-train').value=''; document.getElementById('fill-track').value='';
+      } else {
+        let valid = true;
+        document.querySelectorAll('#fill-carriages .carriage-section').forEach(sec => {
+          const ci = parseInt(sec.dataset.ci, 10);
+          sec.querySelectorAll('.radio-capsule-group').forEach(group => {
+            const ii = group.dataset.ii;
+            const checked = group.querySelector('input:checked');
+            if(!checked) valid = false;
+            const issueName = form.carriages[ci].issues[ii].name;
+            carriageData.push({ ci, ii, issueName, selected: checked ? checked.value : null });
+          });
+        });
+        if(!valid) return alert('⚠️ Seleziona una risposta per OGNI voce');
+      }
+
+      const entry = { train, track, carriages: carriageData, date: new Date().toISOString(), type };
+      responses[currentFormId] = responses[currentFormId] || [];
+      responses[currentFormId].push(entry);
+
+      // Optimistic UX: clear + toast immediately, persist in background.
+      clearDraft();
+      document.querySelectorAll('#fill-carriages input:checked').forEach(i => i.checked = false);
+      document.querySelectorAll('#fill-carriages .pe-option.checked').forEach(el => el.classList.remove('checked'));
+      document.querySelectorAll('#fill-carriages .pe-inputs').forEach(el => el.classList.add('hidden'));
+      document.querySelectorAll('#fill-carriages input[type="number"]').forEach(i => i.value = '');
+      document.querySelectorAll('#fill-carriages textarea.pe-notes').forEach(t => t.value = '');
+      document.getElementById('fill-train').value = '';
+      document.getElementById('fill-track').value = '';
+      showToast('✅ Inviato!');
+      queueRemoteSync();
     }
 
+    // ════════ Reactivity & Draft helpers ════════
+    const DRAFT_PREFIX = 'tr_draft_';
+    let draftSaveTimer = null;
+    let remoteSyncTimer = null;
+    let remoteSyncInFlight = false;
+
+    // Synchronous local persistence — always cheap, always immediate.
+    function persistLocal() {
+      try {
+        localStorage.setItem('tr_forms', JSON.stringify(forms));
+        localStorage.setItem('tr_responses', JSON.stringify(responses));
+      } catch {}
+    }
+
+    // Debounced remote sync (coalesces rapid PUTs so the UI stays snappy).
+    function queueRemoteSync() {
+      persistLocal();
+      clearTimeout(remoteSyncTimer);
+      remoteSyncTimer = setTimeout(async () => {
+        if (remoteSyncInFlight) { queueRemoteSync(); return; }
+        remoteSyncInFlight = true;
+        try { await jsonbinSave({ forms, responses }); }
+        finally { remoteSyncInFlight = false; }
+      }, 800);
+    }
+
+    // Flush pending remote sync when the page is about to unload.
+    window.addEventListener('pagehide', () => {
+      if (remoteSyncTimer) {
+        clearTimeout(remoteSyncTimer);
+        // Fire and forget — best effort before the page dies.
+        jsonbinSave({ forms, responses });
+      }
+    });
+
+    // Brief bottom toast ("💾 Bozza salvata", "✅ Inviato!", …).
+    let toastTimer = null;
+    function showToast(msg, ms = 1400) {
+      const el = document.getElementById('draft-indicator');
+      if (!el) return;
+      el.textContent = msg;
+      el.classList.add('show');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => el.classList.remove('show'), ms);
+    }
+
+    // Collect the full fill-form state for draft persistence.
+    function gatherFillState() {
+      if (!currentFormId || !forms[currentFormId]) return null;
+      const type = forms[currentFormId].type || 'standard';
+      const state = {
+        type,
+        train: document.getElementById('fill-train').value,
+        track: document.getElementById('fill-track').value,
+        carriages: []
+      };
+      document.querySelectorAll('#fill-carriages .carriage-section').forEach(sec => {
+        const ci = parseInt(sec.dataset.ci, 10);
+        if (type === 'pre_estiva') {
+          const checks = {};
+          sec.querySelectorAll('.pe-option').forEach(opt => {
+            const id = opt.dataset.optId;
+            const cb = opt.querySelector('input[type="checkbox"]');
+            if (!cb.checked) return;
+            const nums = {};
+            opt.querySelectorAll('input[type="number"]').forEach(ni => {
+              if (ni.value !== '') nums[ni.dataset.key] = ni.value;
+            });
+            checks[id] = Object.keys(nums).length ? nums : true;
+          });
+          const notes = sec.querySelector('textarea.pe-notes')?.value || '';
+          state.carriages.push({ ci, checks, notes });
+        } else {
+          const selections = {};
+          sec.querySelectorAll('.radio-capsule-group').forEach(group => {
+            const ii = group.dataset.ii;
+            const checked = group.querySelector('input:checked');
+            selections[ii] = checked ? checked.value : null;
+          });
+          state.carriages.push({ ci, selections });
+        }
+      });
+      return state;
+    }
+
+    function scheduleDraftSave() {
+      if (!currentFormId) return;
+      clearTimeout(draftSaveTimer);
+      draftSaveTimer = setTimeout(() => {
+        try {
+          const state = gatherFillState();
+          if (!state) return;
+          localStorage.setItem(DRAFT_PREFIX + currentFormId, JSON.stringify(state));
+          showToast('💾 Bozza salvata');
+        } catch {}
+      }, 400);
+    }
+
+    function loadDraft(id) {
+      try {
+        const raw = localStorage.getItem(DRAFT_PREFIX + id);
+        return raw ? JSON.parse(raw) : null;
+      } catch { return null; }
+    }
+
+    function clearDraft() {
+      if (!currentFormId) return;
+      localStorage.removeItem(DRAFT_PREFIX + currentFormId);
+      document.getElementById('draft-banner')?.classList.add('hidden');
+    }
+
+    // On load, if a draft exists for the current form, auto-apply it and show the banner.
+    function maybeOfferDraftRestore() {
+      if (!currentFormId) return;
+      const draft = loadDraft(currentFormId);
+      const banner = document.getElementById('draft-banner');
+      if (!draft) { banner?.classList.add('hidden'); return; }
+      applyDraft(draft);
+      banner?.classList.remove('hidden');
+    }
+
+    function applyDraft(draft) {
+      if (!draft) return;
+      document.getElementById('fill-train').value = draft.train || '';
+      document.getElementById('fill-track').value = draft.track || '';
+      document.querySelectorAll('#fill-carriages .carriage-section').forEach(sec => {
+        const ci = parseInt(sec.dataset.ci, 10);
+        const cData = (draft.carriages || []).find(c => c.ci === ci);
+        if (!cData) return;
+        if ((draft.type || 'standard') === 'pre_estiva') {
+          sec.querySelectorAll('.pe-option').forEach(opt => {
+            const id = opt.dataset.optId;
+            const val = cData.checks?.[id];
+            if (!val) return;
+            const cb = opt.querySelector('input[type="checkbox"]');
+            cb.checked = true;
+            opt.classList.add('checked');
+            const inputsWrap = opt.querySelector('.pe-inputs');
+            if (inputsWrap) inputsWrap.classList.remove('hidden');
+            if (typeof val === 'object') {
+              Object.entries(val).forEach(([k, v]) => {
+                const ni = opt.querySelector(`input[data-key="${k}"]`);
+                if (ni) ni.value = v;
+              });
+            }
+          });
+          const ta = sec.querySelector('textarea.pe-notes');
+          if (ta) ta.value = cData.notes || '';
+        } else {
+          sec.querySelectorAll('.radio-capsule-group').forEach(group => {
+            const ii = group.dataset.ii;
+            const val = cData.selections?.[ii];
+            if (!val) return;
+            const radios = group.querySelectorAll('input[type="radio"]');
+            radios.forEach(r => { if (r.value === val) r.checked = true; });
+          });
+        }
+      });
+    }
+
+    // Event delegation: any input inside the fill container triggers a debounced draft save.
+    document.addEventListener('DOMContentLoaded', () => {
+      const fill = document.getElementById('fill-carriages');
+      if (fill) {
+        ['input', 'change'].forEach(evt =>
+          fill.addEventListener(evt, () => scheduleDraftSave(), { passive: true })
+        );
+      }
+      ['fill-train', 'fill-track'].forEach(id => {
+        document.getElementById(id)?.addEventListener('input', scheduleDraftSave, { passive: true });
+      });
+      document.getElementById('clear-draft-btn')?.addEventListener('click', () => {
+        if (!confirm('Svuotare la bozza corrente?')) return;
+        clearDraft();
+        if (currentFormId) loadFormToFill(currentFormId);
+        showToast('🗑 Bozza svuotata');
+      });
+      document.getElementById('form-type')?.addEventListener('change', updateBuilderForType);
+    });
+
     function renderDashboard() {
-      if(!isAdmin) return; const list = document.getElementById('responses-list'); list.innerHTML = '';
+      if(!isAdmin) return;
+      const list = document.getElementById('responses-list');
+      list.innerHTML = '';
       const all = Object.values(responses).flat();
       if(all.length===0) { list.innerHTML='<div class="info-box" style="text-align:center;padding:2rem;">📭 Nessun dato.</div>'; return; }
+      const frag = document.createDocumentFragment();
       let count=0;
-      for(const fid in responses) { if(!forms[fid]) continue;
-        responses[fid].forEach((resp, respIdx) => { count++; const card = document.createElement('div'); card.className = 'response-card';
+      for(const fid in responses) {
+        if(!forms[fid]) continue;
+        const form = forms[fid];
+        const ftype = form.type || 'standard';
+        responses[fid].forEach((resp, respIdx) => {
+          count++;
+          const card = document.createElement('div'); card.className = 'response-card';
+          const typeBadge = ftype === 'pre_estiva' ? '<span class="type-badge">🌞 PRE-ESTIVA</span>' : '';
           let html = `<div class="resp-meta">
-              <span><strong>${esc(forms[fid].title)}</strong> <span class="badge">#${count}</span></span>
+              <span><strong>${esc(form.title)}</strong>${typeBadge} <span class="badge">#${count}</span></span>
               <span style="display:flex; align-items:center; gap:0.4rem;">
                 <span>🕐 ${esc(new Date(resp.date).toLocaleString())}</span>
                 <button class="btn btn-danger" data-action="del-resp" style="padding:0.15rem 0.45rem; margin:0; font-size:0.7rem;">🗑</button>
               </span>
             </div>
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.4rem; margin-bottom:0.6rem;">
-              <div class="resp-field"><span class="resp-label">${esc(forms[fid].labelTrain)}:</span> <strong>${esc(resp.train)}</strong></div>
-              <div class="resp-field"><span class="resp-label">${esc(forms[fid].labelTrack)}:</span> <strong>${esc(resp.track)}</strong></div>
+              <div class="resp-field"><span class="resp-label">${esc(form.labelTrain)}:</span> <strong>${esc(resp.train)}</strong></div>
+              <div class="resp-field"><span class="resp-label">${esc(form.labelTrack)}:</span> <strong>${esc(resp.track)}</strong></div>
             </div>`;
-          resp.carriages.forEach(c => {
-            const isOk = c.selected==='Ok';
-            const carriage = forms[fid].carriages[c.ci];
-            const carriageName = carriage ? carriage.name : '(vettura rimossa)';
-            html += `<div style="margin:0.3rem 0; padding-left:0.5rem; border-left:2px solid var(--accent-glow);">
-              <div style="color:var(--rgb-3); font-weight:500; margin-bottom:0.1rem; font-size:0.75rem;">🚃 ${esc(carriageName)} → ${esc(c.issueName)}</div>
-              <span class="result-tag ${isOk?'':'warn'}">${esc(c.selected)}</span></div>`;
-          });
+
+          const respType = resp.type || ftype;
+          if (respType === 'pre_estiva') {
+            resp.carriages.forEach(c => {
+              const carriage = form.carriages[c.ci];
+              const carriageName = carriage ? carriage.name : '(vettura rimossa)';
+              const checks = c.checks || {};
+              const tags = Object.keys(checks).map(id => {
+                const opt = PRE_ESTIVA_OPT_MAP[id];
+                if (!opt) return '';
+                const v = checks[id];
+                if (v && typeof v === 'object') {
+                  const parts = Object.entries(v).map(([k, val]) => {
+                    const inp = (opt.inputs||[]).find(i => i.key === k);
+                    return `${inp ? inp.label : k}: ${esc(val)} ${esc(inp?.suffix || '')}`;
+                  }).join(' · ');
+                  return `<span class="result-tag">${esc(opt.label)} — ${parts}</span>`;
+                }
+                return `<span class="result-tag">${esc(opt.label)}</span>`;
+              }).join('');
+              const notesHtml = c.notes ? `<div style="margin-top:0.3rem;font-size:0.75rem;color:#ccc;"><strong style="color:var(--rgb-3)">🗒️ Note:</strong> ${esc(c.notes)}</div>` : '';
+              html += `<div style="margin:0.4rem 0; padding-left:0.5rem; border-left:2px solid var(--accent-glow);">
+                <div style="color:var(--rgb-3); font-weight:600; margin-bottom:0.2rem; font-size:0.8rem;">🚃 ${esc(carriageName)}</div>
+                <div style="display:flex; flex-wrap:wrap; gap:0.25rem;">${tags || '<span style="font-size:0.75rem;color:var(--text-muted)">— nessuna operazione —</span>'}</div>
+                ${notesHtml}
+              </div>`;
+            });
+          } else {
+            resp.carriages.forEach(c => {
+              const isOk = c.selected==='Ok';
+              const carriage = form.carriages[c.ci];
+              const carriageName = carriage ? carriage.name : '(vettura rimossa)';
+              html += `<div style="margin:0.3rem 0; padding-left:0.5rem; border-left:2px solid var(--accent-glow);">
+                <div style="color:var(--rgb-3); font-weight:500; margin-bottom:0.1rem; font-size:0.75rem;">🚃 ${esc(carriageName)} → ${esc(c.issueName)}</div>
+                <span class="result-tag ${isOk?'':'warn'}">${esc(c.selected)}</span></div>`;
+            });
+          }
           card.innerHTML = html;
           card.querySelector('[data-action="del-resp"]').onclick = () => deleteResponse(fid, respIdx);
-          list.appendChild(card);
+          frag.appendChild(card);
         });
       }
+      list.appendChild(frag);
     }
 
-    async function deleteResponse(fid, idx) {
+    function deleteResponse(fid, idx) {
       if(!isAdmin || !responses[fid] || !responses[fid][idx]) return;
       if(!confirm('⚠️ Eliminare questa risposta?')) return;
       responses[fid].splice(idx, 1);
-      await jsonbinSave({ forms, responses });
+      queueRemoteSync();
       renderDashboard(); renderAvailableForms(); renderFormManager();
     }
 
-    async function clearAllData() {
+    function clearAllData() {
       if(!isAdmin) return; if(confirm('⚠️ Cancellare TUTTO?')) {
         forms={}; responses={}; editingFormId=null;
-        await jsonbinSave({forms,responses});
+        queueRemoteSync();
         renderDashboard(); renderFormManager(); renderAvailableForms();
         document.getElementById('carriages-builder-container').innerHTML=''; carriageCount=0;
       }
