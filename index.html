@@ -407,6 +407,33 @@
       25% { transform: rotate(-12deg) scale(1.08); }
       75% { transform: rotate(12deg) scale(1.08); }
     }
+    .post-submit-wa {
+      margin-top: 1rem;
+      display: flex; flex-direction: column; align-items: stretch; gap: 0.5rem;
+      animation: postSubmitIn 0.35s ease-out;
+    }
+    .post-submit-title {
+      text-align: center; font-weight: 700; color: var(--rgb-2);
+      letter-spacing: 0.3px; font-size: 0.9rem;
+    }
+    .wa-btn {
+      width: 100%;
+      text-decoration: none;
+      padding: 0.95rem 1.1rem;
+      font-size: 0.9rem;
+      letter-spacing: 0.2px;
+      color: #fff;
+      background: linear-gradient(135deg, rgba(0,80,40,0.95), rgba(0,40,20,0.95));
+    }
+    .wa-btn::before {
+      background: linear-gradient(90deg, #25D366, #128C7E, #25D366);
+      background-size: 200% 100%;
+    }
+    .wa-btn .wa-icon { font-size: 1.1rem; display: inline-block; margin-right: 0.2rem; }
+    @keyframes postSubmitIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
 
     .install-prompt {
       position: fixed; bottom: 15px; left: 50%; transform: translateX(-50%);
@@ -505,6 +532,14 @@
           
           <div id="fill-carriages"></div>
           <button class="btn" style="width:100%" onclick="submitResponse()">🚀 Invia Segnalazione</button>
+
+          <div id="post-submit-wa" class="post-submit-wa hidden">
+            <div class="post-submit-title">✅ Modulo inviato!</div>
+            <a id="wa-notify-btn" class="btn wa-btn" target="_blank" rel="noopener" href="#">
+              <span class="wa-icon" aria-hidden="true">💬</span>
+              <span>Comunica su WhatsApp che il modulo è stato compilato</span>
+            </a>
+          </div>
         </div>
       </div>
 
@@ -560,6 +595,7 @@
     // Checklist predefinita per i moduli PRE-ESTIVI (climatizzazione).
     // Ogni voce con "inputs" abilita campi numerici (Kg) quando spuntata.
     const PRE_ESTIVA_OPTIONS = [
+      { id: 'vettura_hitachi',    label: 'Vettura Hitachi' },
       { id: 'flex_ap',            label: 'Sostituito flessibile Ap' },
       { id: 'flex_bp',            label: 'Sostituito flessibile Bp' },
       { id: 'flex_apbp',          label: 'Eseguita sostituzione flessibile Ap/Bp' },
@@ -729,8 +765,22 @@
     });
 
     async function initData() {
-      const d = await jsonbinGet(); forms = d.forms || {}; responses = d.responses || {};
+      // Instant paint from the local mirror so forms appear immediately on open.
+      try {
+        forms = JSON.parse(localStorage.getItem('tr_forms') || '{}');
+        responses = JSON.parse(localStorage.getItem('tr_responses') || '{}');
+      } catch { forms = {}; responses = {}; }
       checkAdminAuth(); renderAvailableForms(); if(isAdmin) renderFormManager();
+
+      // Then reconcile with the remote bin in the background without blocking the UI.
+      try {
+        const d = await jsonbinGet();
+        forms = d.forms || {}; responses = d.responses || {};
+        persistLocal();
+        renderAvailableForms(); if(isAdmin) { renderFormManager(); renderDashboard(); }
+      } catch (err) {
+        console.warn('[initData] remote refresh failed:', err);
+      }
     }
 
     document.querySelectorAll('.tab').forEach(tab => {
@@ -963,6 +1013,7 @@
       currentFormId = id;
       const f = forms[id];
       const type = f.type || 'standard';
+      hidePostSubmitShare();
       document.getElementById('fill-title').textContent = f.title;
       document.getElementById('fill-train').placeholder = f.labelTrain;
       document.getElementById('fill-track').placeholder = f.labelTrack;
@@ -1134,7 +1185,26 @@
       document.getElementById('fill-train').value = '';
       document.getElementById('fill-track').value = '';
       showToast('✅ Inviato!');
+      showPostSubmitShare(form, entry);
       queueRemoteSync();
+    }
+
+    const SUPERVISOR_WA_NUMBER = '393513902303';
+    const SUBMIT_NOTICE_MESSAGE = 'Ho appena compilato il modulo, consultalo per le operazioni effettuate.';
+
+    function showPostSubmitShare(form, entry) {
+      const box = document.getElementById('post-submit-wa');
+      const link = document.getElementById('wa-notify-btn');
+      if (!box || !link) return;
+      const ctx = `📋 *${form.title}* — Treno ${entry.train}, Binario ${entry.track}`;
+      const text = `${SUBMIT_NOTICE_MESSAGE}\n${ctx}`;
+      link.href = `https://wa.me/${SUPERVISOR_WA_NUMBER}?text=${encodeURIComponent(text)}`;
+      box.classList.remove('hidden');
+      box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    function hidePostSubmitShare() {
+      document.getElementById('post-submit-wa')?.classList.add('hidden');
     }
 
     // ════════ Reactivity & Draft helpers ════════
